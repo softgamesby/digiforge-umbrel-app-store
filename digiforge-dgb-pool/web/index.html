@@ -78,8 +78,41 @@ input:focus{border-color:#6c79f5;box-shadow:0 0 0 3px rgba(108,121,245,.13)}
  border-radius:13px;padding:12px 13px;margin-top:9px
 }
 code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;word-break:break-all;color:#cbd6ff}
-.miner{display:grid;grid-template-columns:1fr auto;gap:8px;border-top:1px solid #202c42;padding:12px 0}
+.miner{display:grid;grid-template-columns:1fr auto;gap:12px;border-top:1px solid #202c42;padding:14px 0}
 .miner:first-child{border-top:0;padding-top:0}
+.worker-title{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.worker-stats{text-align:right;min-width:190px}
+.worker-meta{margin-top:4px;line-height:1.55}
+.status-badge{
+ display:inline-flex;align-items:center;border-radius:999px;padding:3px 7px;
+ font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;
+ border:1px solid var(--border)
+}
+.status-active{color:var(--good);border-color:rgba(67,211,141,.35);background:rgba(67,211,141,.08)}
+.status-idle{color:var(--warn);border-color:rgba(255,200,87,.35);background:rgba(255,200,87,.08)}
+.status-stale{color:var(--bad);border-color:rgba(255,107,122,.35);background:rgba(255,107,122,.08)}
+.metric-list{display:grid;gap:0}
+.metric-row{
+ display:flex;justify-content:space-between;gap:18px;padding:10px 0;
+ border-top:1px solid #202c42;font-size:13px
+}
+.metric-row:first-child{border-top:0;padding-top:0}
+.metric-row span:first-child{color:var(--muted)}
+.metric-row strong{text-align:right}
+.round-note{font-size:12px;color:var(--muted);line-height:1.55;margin-top:14px}
+.block-alert{
+ border:1px solid rgba(67,211,141,.42);border-radius:var(--radius);
+ background:linear-gradient(135deg,rgba(67,211,141,.13),rgba(36,212,192,.07));
+ padding:18px 20px;margin:14px 0
+}
+.block-alert strong{font-size:17px;color:var(--good)}
+.block-alert .small{margin-top:5px;line-height:1.5}
+.block-row{
+ display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px;
+ border-top:1px solid #202c42;padding:13px 0
+}
+.block-row:first-child{border-top:0;padding-top:0}
+.block-hash{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;color:#9eadd0;word-break:break-all}
 .empty{color:var(--muted);font-size:13px;padding:12px 0}
 .good-text{color:var(--good)}.warn-text{color:var(--warn)}.bad-text{color:var(--bad)}
 .footer{display:flex;justify-content:space-between;gap:18px;flex-wrap:wrap;margin-top:22px;color:#697792;font-size:12px}
@@ -147,6 +180,68 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;word
     <div class="card"><div class="label">Peers</div><div id="peerCount" class="value">0</div><div class="detail">DigiByte connections</div></div>
   </section>
 
+  <div id="blockAlert" class="block-alert" hidden>
+    <strong id="blockAlertTitle">Block found</strong>
+    <div id="blockAlertDetail" class="small"></div>
+  </div>
+
+  <section class="grid">
+    <div class="card">
+      <div class="label">Blocks found</div>
+      <div id="blockCount" class="value">0</div>
+      <div id="blockCountDetail" class="detail">No pool blocks yet</div>
+    </div>
+    <div class="card">
+      <div class="label">Round effort</div>
+      <div id="roundEffort" class="value">—</div>
+      <div id="roundEffortDetail" class="detail">Expected work, not completion</div>
+    </div>
+    <div class="card">
+      <div class="label">Expected block time</div>
+      <div id="expectedBlock" class="value">—</div>
+      <div class="detail">Statistical estimate at current hashrate</div>
+    </div>
+    <div class="card">
+      <div class="label">Pool network share</div>
+      <div id="networkShare" class="value">—</div>
+      <div class="detail">Current pool hashrate ÷ network hashrate</div>
+    </div>
+  </section>
+
+  <section class="two">
+    <div class="panel">
+      <div class="panel-head"><h2>Mining round</h2><span class="small">Probabilistic</span></div>
+      <div class="metric-list">
+        <div class="metric-row"><span>Accepted shares this round</span><strong id="roundShares">—</strong></div>
+        <div class="metric-row"><span>Round started</span><strong id="roundStarted">—</strong></div>
+        <div class="metric-row"><span>Last accepted share</span><strong id="roundLastShare">—</strong></div>
+        <div class="metric-row"><span>Network difficulty</span><strong id="networkDifficulty">—</strong></div>
+        <div class="metric-row"><span>Network hashrate</span><strong id="networkHashrate">—</strong></div>
+      </div>
+      <div class="round-note">
+        Round effort compares accepted share work with the statistically expected work for one block.
+        A block can be found below 100%, and a round can exceed 100% without finding one.
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><h2>Pool performance</h2><span class="small">Miningcore</span></div>
+      <div class="metric-list">
+        <div class="metric-row"><span>Miningcore pool estimate</span><strong id="perfPoolHash">—</strong></div>
+        <div class="metric-row"><span>Pool shares / second</span><strong id="perfSharesSecond">—</strong></div>
+        <div class="metric-row"><span>Accepted shares · 1 hour</span><strong id="sharesHour">—</strong></div>
+        <div class="metric-row"><span>Accepted shares · 24 hours</span><strong id="sharesDay">—</strong></div>
+        <div class="metric-row"><span>Current chain height</span><strong id="perfHeight">—</strong></div>
+        <div class="metric-row"><span>Last network block</span><strong id="lastNetworkBlock">—</strong></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" style="margin:14px 0">
+    <div class="panel-head"><h2>Pool blocks</h2><span class="small">Latest 10</span></div>
+    <div id="blocks"><div class="empty">No pool blocks found yet.</div></div>
+  </section>
+
   <section class="two">
     <div class="panel">
       <div class="panel-head"><h2>Pool setup</h2><span id="configured" class="small">Not configured</span></div>
@@ -178,7 +273,7 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;word
   </section>
 
   <div class="footer">
-    <span>DigiForge v1.0.6 · by Mikal</span>
+    <span>DigiForge v1.0.7 · by Mikal</span>
     <span>DigiByte Core + Miningcore are upstream open-source dependencies</span>
   </div>
 </div>
@@ -214,6 +309,40 @@ function minerName(m,i){
 }
 function minerHash(m){
   return m.hashrate??m.performance?.hashrate??m.performance?.workers?.[0]?.hashrate??0;
+}
+function humanDuration(seconds){
+  const n=Number(seconds);
+  if(!Number.isFinite(n)||n<0)return "—";
+  if(n<60)return Math.round(n)+" sec";
+  if(n<3600)return (n/60).toFixed(n<600?1:0)+" min";
+  if(n<86400)return (n/3600).toFixed(n<36000?1:0)+" hr";
+  return (n/86400).toFixed(n<864000?1:0)+" days";
+}
+function ageText(seconds){
+  const n=Number(seconds);
+  if(!Number.isFinite(n)||n<0)return "No accepted shares";
+  if(n<10)return "just now";
+  if(n<60)return Math.floor(n)+"s ago";
+  if(n<3600)return Math.floor(n/60)+"m ago";
+  if(n<86400)return Math.floor(n/3600)+"h ago";
+  return Math.floor(n/86400)+"d ago";
+}
+function formatDate(value){
+  if(!value)return "—";
+  const d=new Date(value);
+  return Number.isNaN(d.getTime())?"—":d.toLocaleString();
+}
+function numberText(value,digits=0){
+  const n=Number(value);
+  return Number.isFinite(n)?n.toLocaleString(undefined,{maximumFractionDigits:digits}):"—";
+}
+function statusClass(status){
+  return ["active","idle","stale"].includes(status)?status:"stale";
+}
+function shortHash(value){
+  const v=String(value||"");
+  if(v.length<=24)return v||"—";
+  return v.slice(0,12)+"…"+v.slice(-12);
 }
 async function refresh(){
   try{
@@ -258,11 +387,95 @@ async function refresh(){
     }
 
     const miners=Array.isArray(s.miners)?s.miners:[];
-    $("miners").innerHTML=miners.length?miners.map((m,i)=>`
+    const perf=s.performance||{}, round=s.round||{}, summary=s.blockSummary||{};
+    const blocks=Array.isArray(s.blocks)?s.blocks:[];
+
+    $("blockCount").textContent=numberText(summary.total||0);
+    $("blockCountDetail").textContent=Number(summary.total||0)
+      ? `${numberText(summary.confirmed||0)} confirmed · ${numberText(summary.pending||0)} pending · ${numberText(summary.orphaned||0)} orphaned`
+      : "No pool blocks yet";
+
+    const effort=Number(round.effortpercent);
+    $("roundEffort").textContent=Number.isFinite(effort)?effort.toFixed(effort<10?2:1)+"%":"—";
+    $("roundEffortDetail").textContent=Number.isFinite(effort)
+      ? `${numberText(round.acceptedshares||0)} accepted shares this round`
+      : "Expected work, not completion";
+
+    $("expectedBlock").textContent=humanDuration(p.expectedBlockTimeSeconds);
+    const sharePct=Number(p.networkSharePercent);
+    $("networkShare").textContent=Number.isFinite(sharePct)
+      ? (sharePct<0.01?sharePct.toFixed(4):sharePct.toFixed(2))+"%"
+      : "—";
+
+    $("roundShares").textContent=numberText(round.acceptedshares||0);
+    $("roundStarted").textContent=formatDate(round.started);
+    $("roundLastShare").textContent=formatDate(round.lastshare);
+    $("networkDifficulty").textContent=numberText(p.networkDifficulty??perf.networkdifficulty,2);
+    $("networkHashrate").textContent=humanHash(p.networkHashrate??perf.networkhashrate);
+
+    $("perfPoolHash").textContent=humanHash(perf.poolhashrate??p.poolEstimateHashrate);
+    $("perfSharesSecond").textContent=Number(perf.sharespersecond??p.sharesPerSecond??0).toFixed(3);
+    $("sharesHour").textContent=numberText(miners.reduce((a,m)=>a+Number(m.sharesLastHour||0),0));
+    $("sharesDay").textContent=numberText(miners.reduce((a,m)=>a+Number(m.sharesLast24h||0),0));
+    $("perfHeight").textContent=numberText(perf.blockheight??p.blockHeight??n.blocks);
+    $("lastNetworkBlock").textContent=formatDate(perf.lastnetworkblocktime);
+
+    if(blocks.length){
+      const b=blocks[0];
+      $("blockAlert").hidden=false;
+      $("blockAlertTitle").textContent=`BLOCK FOUND · height ${numberText(b.blockheight)}`;
+      $("blockAlertDetail").textContent=[
+        b.status||"status pending",
+        b.reward!=null?`${numberText(b.reward,8)} DGB`:"",
+        formatDate(b.created)
+      ].filter(Boolean).join(" · ");
+    }else{
+      $("blockAlert").hidden=true;
+    }
+
+    $("blocks").innerHTML=blocks.length?blocks.map(b=>`
+      <div class="block-row">
+        <div>
+          <div class="worker-title">
+            <strong>Height ${escapeHtml(numberText(b.blockheight))}</strong>
+            <span class="status-badge ${String(b.status||"").toLowerCase()==="confirmed"?"status-active":String(b.status||"").toLowerCase()==="pending"?"status-idle":"status-stale"}">${escapeHtml(b.status||"unknown")}</span>
+          </div>
+          <div class="small worker-meta">
+            ${escapeHtml(formatDate(b.created))} · Reward ${escapeHtml(numberText(b.reward,8))} DGB
+            ${b.effort!=null?` · Effort ${escapeHtml(numberText(Number(b.effort)*100,2))}%`:""}
+          </div>
+          <div class="block-hash">${escapeHtml(shortHash(b.hash))}</div>
+        </div>
+        <div style="text-align:right">
+          <strong>${b.confirmationprogress!=null?escapeHtml(numberText(Number(b.confirmationprogress)*100,1))+"%":"—"}</strong>
+          <div class="small">confirmations</div>
+          <div class="small" style="margin-top:5px">${escapeHtml(b.miner||"pool miner")}</div>
+        </div>
+      </div>`).join(""):'<div class="empty">No pool blocks found yet. Mining is probabilistic; round effort is shown above.</div>';
+
+    $("miners").innerHTML=miners.length?miners.map((m,i)=>{
+      const status=statusClass(String(m.status||"stale").toLowerCase());
+      return `
       <div class="miner">
-        <div><strong>${escapeHtml(minerName(m,i))}</strong><div class="small">${escapeHtml(m.miner||m.address||"SHA256 worker")}</div></div>
-        <div style="text-align:right"><strong>${humanHash(minerHash(m))}</strong><div class="small">${Number(m.sharesPerSecond||0).toFixed(3)} shares/s</div></div>
-      </div>`).join(""):'<div class="empty">No active workers yet.</div>';
+        <div>
+          <div class="worker-title">
+            <strong>${escapeHtml(minerName(m,i))}</strong>
+            <span class="status-badge status-${status}">${escapeHtml(status)}</span>
+          </div>
+          <div class="small worker-meta">${escapeHtml(m.miner||m.address||"SHA256 worker")}</div>
+          <div class="small worker-meta">
+            ${escapeHtml(numberText(m.acceptedShares||0))} accepted ·
+            ${escapeHtml(numberText(m.sharesLastHour||0))} last hour ·
+            ${escapeHtml(numberText(m.sharesLast24h||0))} last 24h
+          </div>
+        </div>
+        <div class="worker-stats">
+          <strong>${humanHash(minerHash(m))}</strong>
+          <div class="small">${Number(m.sharesPerSecond||0).toFixed(3)} shares/s</div>
+          <div class="small worker-meta">Last share ${escapeHtml(ageText(m.lastShareAgeSeconds))}</div>
+        </div>
+      </div>`;
+    }).join(""):'<div class="empty">No worker history yet.</div>';
   }catch(e){
     setDot("statusDot",false);
     $("statusText").textContent="Dashboard reconnecting";

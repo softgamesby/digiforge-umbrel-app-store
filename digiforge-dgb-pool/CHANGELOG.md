@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.0.7
+
+- Added current mining-round effort based on accepted share difficulty versus DigiByte network difficulty.
+- Added statistical expected time to block and the pool's current share of DigiByte SHA256 network hashrate.
+- Added pool block history with height, timestamp, reward, status, confirmation progress, effort, miner address, and block hash when Miningcore records a block.
+- Added pool-performance metrics from Miningcore's PostgreSQL history, including network hashrate, network difficulty, shares per second, chain height, and last network block time.
+- Added per-worker `ACTIVE`, `IDLE`, and `STALE` status with total accepted shares, one-hour and 24-hour share counts, shares per second, and last accepted-share age.
+- Added short-lived read-only PostgreSQL metric caching so normal dashboard refreshes do not repeatedly rescan Miningcore history.
+- Kept Bitaxe/ASIC Stratum port `3256` and NerdMiner V2 port `3257` unchanged.
+
 ## 1.0.6
 
 - Added dedicated NerdMiner V2 Stratum port `3257` with fixed difficulty `0.001`, while leaving Bitaxe/ASIC port `3256` unchanged.

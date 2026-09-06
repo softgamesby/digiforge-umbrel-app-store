@@ -4,6 +4,11 @@ import json
 import os
 import re
 import urllib.request
+import time
+from datetime import datetime, timezone
+from decimal import Decimal
+
+import pg8000.dbapi as pgdb
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
@@ -37,6 +42,12 @@ POSTGRES_PASSWORD = read_secret(POSTGRES_PASSWORD_FILE, "PostgreSQL")
 RPC_URL = "http://digibyted:14022/"
 MC_API = "http://miningcore:4000/api"
 POOL_ID = "dgb-sha256"
+
+DB_METRICS_CACHE = {
+    "expires": 0.0,
+    "value": None,
+}
+DB_METRICS_TTL_SECONDS = 10
 
 def atomic_write(path, text):
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -245,8 +256,264 @@ def miningcore_workers():
 
     return workers
 
+def db_json_value(value):
+    if isinstance(value, datetime):
+        return value.astimezone(timezone.utc).isoformat()
+    if isinstance(value, Decimal):
+        return float(value)
+    return value
+
+def db_fetch(cursor, sql, params=()):
+    cursor.execute(sql, params)
+    columns = [column[0] for column in cursor.description]
+    return [
+        dict(zip(columns, (db_json_value(value) for value in row)))
+        for row in cursor.fetchall()
+    ]
+
+def miningcore_db_metrics():
+    now = time.monotonic()
+    cached = DB_METRICS_CACHE.get("value")
+    if cached is not None and now < DB_METRICS_CACHE.get("expires", 0):
+        return cached
+
+    conn = pgdb.connect(
+        host="postgres",
+        port=5432,
+        database="miningcore",
+        user="miningcore",
+        password=POSTGRES_PASSWORD,
+        timeout=3,
+    )
+
+    try:
+        cursor = conn.cursor()
+
+        # Every dashboard database transaction is explicitly read-only.
+        cursor.execute("SET TRANSACTION READ ONLY")
+
+        pool_rows = db_fetch(cursor, """
+            SELECT
+                blockheight,
+                poolhashrate,
+                sharespersecond,
+                networkhashrate,
+                networkdifficulty,
+                connectedminers,
+                connectedpeers,
+                lastnetworkblocktime,
+                created
+            FROM poolstats
+            WHERE poolid = %s
+            ORDER BY created DESC
+            LIMIT 1
+        """, (POOL_ID,))
+        pool_stats = pool_rows[0] if pool_rows else {}
+
+        worker_stats = db_fetch(cursor, """
+            SELECT DISTINCT ON (worker)
+                miner,
+                worker,
+                hashrate,
+                sharespersecond,
+                created
+            FROM minerstats
+            WHERE poolid = %s
+              AND worker IS NOT NULL
+              AND worker <> ''
+            ORDER BY worker, created DESC
+        """, (POOL_ID,))
+
+        share_stats = db_fetch(cursor, """
+            SELECT
+                COALESCE(NULLIF(worker, ''), 'default') AS worker,
+                miner,
+                COUNT(*) AS acceptedshares,
+                COUNT(*) FILTER (
+                    WHERE created > NOW() - INTERVAL '1 hour'
+                ) AS shareslasthour,
+                COUNT(*) FILTER (
+                    WHERE created > NOW() - INTERVAL '24 hours'
+                ) AS shareslast24h,
+                MAX(created) AS lastshare
+            FROM shares
+            WHERE poolid = %s
+            GROUP BY COALESCE(NULLIF(worker, ''), 'default'), miner
+            ORDER BY MAX(created) DESC
+        """, (POOL_ID,))
+
+        block_rows = db_fetch(cursor, """
+            SELECT
+                blockheight,
+                networkdifficulty,
+                status,
+                type,
+                confirmationprogress,
+                effort,
+                miner,
+                reward,
+                hash,
+                created
+            FROM blocks
+            WHERE poolid = %s
+            ORDER BY created DESC
+            LIMIT 10
+        """, (POOL_ID,))
+
+        block_summary_rows = db_fetch(cursor, """
+            SELECT
+                COUNT(*) AS total,
+                COUNT(*) FILTER (
+                    WHERE LOWER(COALESCE(status, '')) = 'confirmed'
+                ) AS confirmed,
+                COUNT(*) FILTER (
+                    WHERE LOWER(COALESCE(status, '')) = 'pending'
+                ) AS pending,
+                COUNT(*) FILTER (
+                    WHERE LOWER(COALESCE(status, '')) IN ('orphaned', 'orphan')
+                ) AS orphaned,
+                MAX(created) AS lastblock
+            FROM blocks
+            WHERE poolid = %s
+        """, (POOL_ID,))
+        block_summary = block_summary_rows[0] if block_summary_rows else {}
+
+        cursor.execute("""
+            SELECT created
+            FROM blocks
+            WHERE poolid = %s
+            ORDER BY created DESC
+            LIMIT 1
+        """, (POOL_ID,))
+        last_block = cursor.fetchone()
+        round_start = last_block[0] if last_block else None
+
+        if round_start is None:
+            round_rows = db_fetch(cursor, """
+                SELECT
+                    COUNT(*) AS acceptedshares,
+                    MIN(created) AS started,
+                    MAX(created) AS lastshare,
+                    100.0 * COALESCE(
+                        SUM(difficulty / NULLIF(networkdifficulty, 0)),
+                        0
+                    ) AS effortpercent
+                FROM shares
+                WHERE poolid = %s
+            """, (POOL_ID,))
+        else:
+            round_rows = db_fetch(cursor, """
+                SELECT
+                    COUNT(*) AS acceptedshares,
+                    MIN(created) AS started,
+                    MAX(created) AS lastshare,
+                    100.0 * COALESCE(
+                        SUM(difficulty / NULLIF(networkdifficulty, 0)),
+                        0
+                    ) AS effortpercent
+                FROM shares
+                WHERE poolid = %s
+                  AND created > %s
+            """, (POOL_ID, round_start))
+
+        current_round = round_rows[0] if round_rows else {}
+
+        result = {
+            "poolStats": pool_stats,
+            "workerStats": worker_stats,
+            "shareStats": share_stats,
+            "blocks": block_rows,
+            "blockSummary": block_summary,
+            "round": current_round,
+        }
+        DB_METRICS_CACHE["value"] = result
+        DB_METRICS_CACHE["expires"] = (
+            time.monotonic() + DB_METRICS_TTL_SECONDS
+        )
+        return result
+    finally:
+        conn.close()
+
+def merge_worker_metrics(live_workers, db_metrics):
+    live_by_worker = {
+        str(worker.get("worker") or "default"): worker
+        for worker in live_workers
+    }
+    stats_by_worker = {
+        str(worker.get("worker") or "default"): worker
+        for worker in db_metrics.get("workerStats", [])
+    }
+    shares_by_worker = {
+        str(worker.get("worker") or "default"): worker
+        for worker in db_metrics.get("shareStats", [])
+    }
+
+    names = list(live_by_worker)
+    for source in (stats_by_worker, shares_by_worker):
+        for name in source:
+            if name not in names:
+                names.append(name)
+
+    now = datetime.now(timezone.utc)
+    merged = []
+
+    for name in names:
+        live = live_by_worker.get(name, {})
+        stats = stats_by_worker.get(name, {})
+        shares = shares_by_worker.get(name, {})
+
+        last_share_text = shares.get("lastshare")
+        last_share_age = None
+        if last_share_text:
+            try:
+                last_share = datetime.fromisoformat(last_share_text)
+                last_share_age = max(0, (now - last_share).total_seconds())
+            except (TypeError, ValueError):
+                pass
+
+        if last_share_age is not None and last_share_age <= 300:
+            status = "active"
+        elif last_share_age is not None and last_share_age <= 1800:
+            status = "idle"
+        else:
+            status = "stale"
+
+        hashrate = live.get("hashrate")
+        if hashrate is None:
+            hashrate = stats.get("hashrate", 0)
+
+        shares_per_second = live.get("sharesPerSecond")
+        if shares_per_second is None:
+            shares_per_second = stats.get("sharespersecond", 0)
+
+        merged.append({
+            "miner": (
+                live.get("miner")
+                or shares.get("miner")
+                or stats.get("miner")
+                or ""
+            ),
+            "worker": name,
+            "status": status,
+            "hashrate": hashrate or 0,
+            "sharesPerSecond": shares_per_second or 0,
+            "acceptedShares": shares.get("acceptedshares", 0),
+            "sharesLastHour": shares.get("shareslasthour", 0),
+            "sharesLast24h": shares.get("shareslast24h", 0),
+            "lastShare": last_share_text,
+            "lastShareAgeSeconds": last_share_age,
+            "statsUpdated": stats.get("created"),
+        })
+
+    status_order = {"active": 0, "idle": 1, "stale": 2}
+    merged.sort(key=lambda worker: (
+        status_order.get(worker.get("status"), 9),
+        str(worker.get("worker") or "").lower(),
+    ))
+    return merged
+
 class Handler(BaseHTTPRequestHandler):
-    server_version = "DigiForge/1.0.6"
+    server_version = "DigiForge/1.0.7"
 
     def send_json(self, payload, status=200):
         raw = json.dumps(payload).encode()
@@ -276,16 +543,20 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/icon.svg":
             return self.send_file("icon.svg", "image/svg+xml")
         if path == "/api/health":
-            return self.send_json({"ok": True, "version": "1.0.6"})
+            return self.send_json({"ok": True, "version": "1.0.7"})
 
         if path == "/api/status":
             result = {
-                "version": "1.0.6",
+                "version": "1.0.7",
                 "configured": bool(current_address()),
                 "address": current_address(),
                 "node": {"online": False},
                 "pool": {"online": False, "stratum": False},
-                "miners": []
+                "miners": [],
+                "performance": {},
+                "round": {},
+                "blocks": [],
+                "blockSummary": {}
             }
 
             try:
@@ -323,16 +594,86 @@ class Handler(BaseHTTPRequestHandler):
                     "blockHeight": network.get("blockHeight", 0)
                 })
                 try:
-                    workers = miningcore_workers()
+                    live_workers = miningcore_workers()
+                except Exception as exc:
+                    live_workers = []
+                    result["minersError"] = str(exc)
+
+                # Preserve live Miningcore worker visibility even if the
+                # optional PostgreSQL history/round metrics are unavailable.
+                fallback_workers = []
+                for worker in live_workers:
+                    fallback = dict(worker)
+                    fallback["status"] = "active"
+                    fallback["historyAvailable"] = False
+                    fallback_workers.append(fallback)
+
+                result["miners"] = fallback_workers
+                result["pool"]["connectedWorkers"] = len(fallback_workers)
+
+                if fallback_workers:
+                    result["pool"]["poolHashrate"] = sum(
+                        float(worker.get("hashrate") or 0)
+                        for worker in fallback_workers
+                    )
+
+                try:
+                    db_metrics = miningcore_db_metrics()
+                    workers = merge_worker_metrics(live_workers, db_metrics)
+
+                    for worker in workers:
+                        worker["historyAvailable"] = True
+
                     result["miners"] = workers
-                    if workers:
+                    result["performance"] = db_metrics.get("poolStats", {})
+                    result["round"] = db_metrics.get("round", {})
+                    result["blocks"] = db_metrics.get("blocks", [])
+                    result["blockSummary"] = db_metrics.get("blockSummary", {})
+
+                    active_workers = [
+                        worker for worker in workers
+                        if worker.get("status") == "active"
+                    ]
+                    result["pool"]["connectedWorkers"] = len(active_workers)
+
+                    if active_workers:
                         result["pool"]["poolHashrate"] = sum(
                             float(worker.get("hashrate") or 0)
-                            for worker in workers
+                            for worker in active_workers
                         )
-                        result["pool"]["connectedWorkers"] = len(workers)
-                except Exception:
-                    result["miners"] = []
+
+                    perf = result["performance"]
+                    if not result["pool"].get("networkHashrate"):
+                        result["pool"]["networkHashrate"] = perf.get(
+                            "networkhashrate", 0
+                        )
+                    if not result["pool"].get("networkDifficulty"):
+                        result["pool"]["networkDifficulty"] = perf.get(
+                            "networkdifficulty", 0
+                        )
+                except Exception as exc:
+                    result["performanceError"] = str(exc)
+
+                pool_hashrate = float(
+                    result["pool"].get("poolHashrate") or 0
+                )
+                network_hashrate = float(
+                    result["pool"].get("networkHashrate") or 0
+                )
+                network_difficulty = float(
+                    result["pool"].get("networkDifficulty") or 0
+                )
+
+                result["pool"]["networkSharePercent"] = (
+                    100.0 * pool_hashrate / network_hashrate
+                    if pool_hashrate > 0 and network_hashrate > 0
+                    else None
+                )
+                result["pool"]["expectedBlockTimeSeconds"] = (
+                    network_difficulty * (2 ** 32) / pool_hashrate
+                    if pool_hashrate > 0 and network_difficulty > 0
+                    else None
+                )
             except Exception as exc:
                 result["pool"]["error"] = str(exc)
 
