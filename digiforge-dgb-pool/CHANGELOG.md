@@ -2,6 +2,14 @@
 
 Developed by Mikal.
 
+## 1.0.9
+
+- Fixed outdated repository and package references to ensure reliable future DigiForge updates.
+- Updated official support, submission, icon, and project links.
+- Updated GHCR image references while preserving the existing verified immutable image digests.
+- No mining configuration, database, wallet, or Stratum behavior changes.
+- Bitaxe/ASIC port 3256 and NerdMiner port 3257 remain unchanged.
+
 ## 1.0.8
 
 - Changed the headline pool hashrate to a six-hour accepted-work effective hashrate calculated from accepted share difficulty.

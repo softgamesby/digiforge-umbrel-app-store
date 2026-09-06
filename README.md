@@ -2,7 +2,7 @@
 
 DigiForge is a custom umbrelOS community app for a private DigiByte SHA256 mining pool.
 
-Repository: https://github.com/xlaky1/digiforge-umbrel-app-store
+Repository: https://github.com/softgamesby/digiforge-umbrel-app-store
 
 ## Current release
 
@@ -12,7 +12,7 @@ Repository: https://github.com/xlaky1/digiforge-umbrel-app-store
 
 Add this repository to **Umbrel → App Store → Community App Stores**:
 
-`https://github.com/xlaky1/digiforge-umbrel-app-store`
+`https://github.com/softgamesby/digiforge-umbrel-app-store`
 
 Then install **DigiForge**.
 

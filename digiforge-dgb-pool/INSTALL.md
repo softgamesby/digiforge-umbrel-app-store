@@ -1,8 +1,8 @@
 # DigiForge 1.0.1 installation
 
-1. Upload the contents of this package to the root of `https://github.com/xlaky1/digiforge-umbrel-app-store`.
+1. Upload the contents of this package to the root of `https://github.com/softgamesby/digiforge-umbrel-app-store`.
 2. In Umbrel open **App Store → Community App Stores**.
-3. Add or refresh `https://github.com/xlaky1/digiforge-umbrel-app-store`.
+3. Add or refresh `https://github.com/softgamesby/digiforge-umbrel-app-store`.
 4. Install **DigiForge**.
 5. Open DigiForge from the Umbrel desktop.
 6. Enter a DigiByte address you control.
