@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# DigiForge — Developed by Mikal
 
 import hashlib
 import hmac

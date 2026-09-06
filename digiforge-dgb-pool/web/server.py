@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# DigiForge — DigiByte SHA256 mining hub
+# Developed by Mikal
 import base64
 import json
 import os
@@ -342,6 +344,22 @@ def miningcore_db_metrics():
             ORDER BY MAX(created) DESC
         """, (POOL_ID,))
 
+        effective_hashrate_rows = db_fetch(cursor, """
+            SELECT
+                COALESCE(SUM(difficulty), 0)
+                    * 4294967296.0 / 21600.0 AS effectivehashrate6h,
+                COUNT(*) AS shares6h,
+                MIN(created) AS windowstart,
+                MAX(created) AS windowend
+            FROM shares
+            WHERE poolid = %s
+              AND created > NOW() - INTERVAL '6 hours'
+        """, (POOL_ID,))
+        effective_hashrate = (
+            effective_hashrate_rows[0]
+            if effective_hashrate_rows else {}
+        )
+
         block_rows = db_fetch(cursor, """
             SELECT
                 blockheight,
@@ -422,6 +440,7 @@ def miningcore_db_metrics():
             "poolStats": pool_stats,
             "workerStats": worker_stats,
             "shareStats": share_stats,
+            "effectiveHashrate": effective_hashrate,
             "blocks": block_rows,
             "blockSummary": block_summary,
             "round": current_round,
@@ -513,7 +532,7 @@ def merge_worker_metrics(live_workers, db_metrics):
     return merged
 
 class Handler(BaseHTTPRequestHandler):
-    server_version = "DigiForge/1.0.7"
+    server_version = "DigiForge/1.0.8"
 
     def send_json(self, payload, status=200):
         raw = json.dumps(payload).encode()
@@ -543,11 +562,11 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/icon.svg":
             return self.send_file("icon.svg", "image/svg+xml")
         if path == "/api/health":
-            return self.send_json({"ok": True, "version": "1.0.7"})
+            return self.send_json({"ok": True, "version": "1.0.8"})
 
         if path == "/api/status":
             result = {
-                "version": "1.0.7",
+                "version": "1.0.8",
                 "configured": bool(current_address()),
                 "address": current_address(),
                 "node": {"online": False},
@@ -636,10 +655,17 @@ class Handler(BaseHTTPRequestHandler):
                     ]
                     result["pool"]["connectedWorkers"] = len(active_workers)
 
-                    if active_workers:
-                        result["pool"]["poolHashrate"] = sum(
-                            float(worker.get("hashrate") or 0)
-                            for worker in active_workers
+                    effective = db_metrics.get("effectiveHashrate", {})
+                    effective_hashrate = float(
+                        effective.get("effectivehashrate6h") or 0
+                    )
+                    if effective_hashrate > 0:
+                        result["pool"]["poolHashrate"] = effective_hashrate
+                        result["pool"]["effectiveHashrate6h"] = (
+                            effective_hashrate
+                        )
+                        result["pool"]["effectiveHashrateShares6h"] = int(
+                            effective.get("shares6h") or 0
                         )
 
                     perf = result["performance"]

@@ -2,7 +2,7 @@ manifestVersion: 1
 id: digiforge-dgb-pool
 category: finance
 name: DigiForge
-version: "1.0.7"
+version: "1.0.8"
 tagline: Private DigiByte SHA256 mining on Umbrel
 description: >-
   DigiForge is a self-hosted DigiByte SHA256 mining hub for umbrelOS.
@@ -19,12 +19,13 @@ gallery: []
 path: ""
 defaultPassword: ""
 releaseNotes: >-
-  DigiForge 1.0.7 adds mining-round observability, pool block history,
-  statistical expected block time, network share and performance metrics,
-  plus ACTIVE, IDLE, and STALE worker states with accepted-share activity.
-  Round effort is presented as probabilistic expected work rather than
-  deterministic block progress. Bitaxe/ASIC port 3256 and NerdMiner port
-  3257 remain unchanged.
+  DigiForge 1.0.8 corrects the headline pool hashrate using a six-hour
+  accepted-work estimate and uses that effective rate for statistical
+  expected block time and pool network share, while retaining Miningcore's
+  shorter-window estimate separately. This release also adds a read-only
+  Support DigiForge section for BTC, ETH, DOGE, LTC, and DGB public wallet
+  addresses and expands DigiForge / Developed by Mikal attribution.
+  Bitaxe/ASIC port 3256 and NerdMiner port 3257 remain unchanged.
 submitter: Mikal
 submission: https://github.com/xlaky1/digiforge-umbrel-app-store
 icon: https://raw.githubusercontent.com/xlaky1/digiforge-umbrel-app-store/main/digiforge-dgb-pool/icon.svg

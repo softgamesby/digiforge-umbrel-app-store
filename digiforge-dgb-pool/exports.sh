@@ -1,4 +1,5 @@
 #!/bin/sh
+# DigiForge — Developed by Mikal
 export APP_DIGIFORGE_STRATUM_PORT="3256"
 export APP_DIGIFORGE_NERDMINER_STRATUM_PORT="3257"
 export APP_DIGIFORGE_DGB_P2P_PORT="12024"

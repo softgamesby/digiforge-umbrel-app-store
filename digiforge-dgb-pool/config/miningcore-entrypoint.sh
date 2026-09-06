@@ -1,4 +1,5 @@
 #!/bin/sh
+# DigiForge integration — Developed by Mikal
 set -u
 
 CONFIG=/config/config.json

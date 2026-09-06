@@ -1,4 +1,14 @@
-# Changelog
+# DigiForge Changelog
+
+Developed by Mikal.
+
+## 1.0.8
+
+- Changed the headline pool hashrate to a six-hour accepted-work effective hashrate calculated from accepted share difficulty.
+- Changed statistical expected block time and pool network share to use the six-hour effective hashrate while retaining Miningcore's shorter-window estimate separately.
+- Added a static, read-only Support DigiForge section with public BTC, ETH, DOGE, LTC, and DGB receiving addresses.
+- Expanded DigiForge and Developed by Mikal attribution across DigiForge-owned dashboard, backend, wrappers, and integration files.
+- Kept Bitaxe/ASIC Stratum port `3256` and NerdMiner V2 port `3257` unchanged.
 
 ## 1.0.7
 

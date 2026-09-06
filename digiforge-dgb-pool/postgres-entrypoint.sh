@@ -1,4 +1,5 @@
 #!/bin/sh
+# DigiForge integration — Developed by Mikal
 set -eu
 
 PGDATA="${PGDATA:-/var/lib/postgresql/data}"

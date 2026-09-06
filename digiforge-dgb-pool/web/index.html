@@ -4,7 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#090f1e">
-<title>DigiForge</title>
+<meta name="author" content="Mikal">
+<meta name="application-name" content="DigiForge">
+<title>DigiForge · Developed by Mikal</title>
 <style>
 :root{
   --bg:#070b14;--panel:#0e1525;--panel2:#111b2e;--border:#22304a;
@@ -30,6 +32,9 @@ button,input{font:inherit}
 .logo{width:52px;height:52px;filter:drop-shadow(0 12px 24px rgba(81,94,255,.22))}
 .title{font-size:25px;font-weight:780;letter-spacing:-.03em}
 .subtitle{font-size:13px;color:var(--muted);margin-top:3px}
+.top-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end}
+.support-link{display:inline-flex;align-items:center;padding:9px 13px;border:1px solid rgba(113,128,255,.42);border-radius:999px;color:#dfe4ff;text-decoration:none;font-size:13px;font-weight:700;background:rgba(113,128,255,.09);transition:.2s}
+.support-link:hover{background:rgba(113,128,255,.16);border-color:rgba(113,128,255,.72)}
 .pill{display:inline-flex;gap:8px;align-items:center;padding:9px 12px;border:1px solid var(--border);
  border-radius:999px;background:rgba(14,21,37,.78);font-size:13px;color:var(--muted)}
 .dot{width:8px;height:8px;border-radius:50%;background:var(--warn)}
@@ -114,6 +119,13 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;word
 .block-row:first-child{border-top:0;padding-top:0}
 .block-hash{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;color:#9eadd0;word-break:break-all}
 .empty{color:var(--muted);font-size:13px;padding:12px 0}
+.support-panel{margin-top:14px;scroll-margin-top:20px}
+.support-intro{color:var(--muted);font-size:13px;line-height:1.6;margin:0 0 16px}
+.support-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.support-wallet{background:#080e1a;border:1px solid #26334a;border-radius:14px;padding:13px 14px;min-width:0}
+.support-wallet strong{display:block;font-size:12px;letter-spacing:.08em;color:var(--accent2);margin-bottom:7px}
+.support-wallet code{display:block;line-height:1.5}
+.support-wallet:last-child:nth-child(odd){grid-column:1/-1}
 .good-text{color:var(--good)}.warn-text{color:var(--warn)}.bad-text{color:var(--bad)}
 .footer{display:flex;justify-content:space-between;gap:18px;flex-wrap:wrap;margin-top:22px;color:#697792;font-size:12px}
 @media(max-width:900px){.grid{grid-template-columns:repeat(2,1fr)}.two{grid-template-columns:1fr}}
@@ -122,6 +134,8 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;word
  .hero{padding:21px}.hero-row{align-items:flex-start;flex-direction:column}
  .grid{grid-template-columns:1fr 1fr;gap:10px}.card{padding:15px;min-height:108px}.value{font-size:21px}
  .field{flex-direction:column}.btn{width:100%}.codebox{align-items:flex-start;flex-direction:column}
+ .top-actions{justify-content:flex-start}.support-grid{grid-template-columns:1fr}
+ .support-wallet:last-child:nth-child(odd){grid-column:auto}
 }
 </style>
 </head>
@@ -153,9 +167,12 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;word
   <circle cx="193" cy="99" r="3" fill="#45DFF7"/>
   <circle cx="184" cy="119" r="2.5" fill="#8CFAFF"/>
 </svg>
-      <div><div class="title">DigiForge</div><div class="subtitle">DigiByte SHA256 mining hub · by Mikal</div></div>
+      <div><div class="title">DigiForge</div><div class="subtitle">DigiByte SHA256 mining hub · Developed by Mikal</div></div>
     </div>
-    <div class="pill"><span id="statusDot" class="dot"></span><span id="statusText" class="status-text">Starting services</span></div>
+    <div class="top-actions">
+      <a class="support-link" href="#support">Support DigiForge</a>
+      <div class="pill"><span id="statusDot" class="dot"></span><span id="statusText" class="status-text">Starting services</span></div>
+    </div>
   </header>
 
   <section class="hero">
@@ -175,7 +192,7 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;word
 
   <section class="grid">
     <div class="card"><div class="label">Node</div><div id="nodeValue" class="value">—</div><div id="nodeDetail" class="detail">Checking</div></div>
-    <div class="card"><div class="label">Pool hashrate</div><div id="poolHash" class="value">—</div><div id="poolHashDetail" class="detail">Sum of active workers</div></div>
+    <div class="card"><div class="label">Pool hashrate</div><div id="poolHash" class="value">—</div><div id="poolHashDetail" class="detail">6-hour accepted-work estimate</div></div>
     <div class="card"><div class="label">Workers</div><div id="minerCount" class="value">0</div><div class="detail">Active mining workers</div></div>
     <div class="card"><div class="label">Peers</div><div id="peerCount" class="value">0</div><div class="detail">DigiByte connections</div></div>
   </section>
@@ -199,12 +216,12 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;word
     <div class="card">
       <div class="label">Expected block time</div>
       <div id="expectedBlock" class="value">—</div>
-      <div class="detail">Statistical estimate at current hashrate</div>
+      <div class="detail">Statistical estimate using 6-hour effective hashrate</div>
     </div>
     <div class="card">
       <div class="label">Pool network share</div>
       <div id="networkShare" class="value">—</div>
-      <div class="detail">Current pool hashrate ÷ network hashrate</div>
+      <div class="detail">6-hour effective hashrate ÷ network hashrate</div>
     </div>
   </section>
 
@@ -272,8 +289,26 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;word
     </div>
   </section>
 
+  <section id="support" class="panel support-panel">
+    <div class="panel-head">
+      <h2>Support DigiForge</h2>
+      <span class="small">Developed by Mikal</span>
+    </div>
+    <p class="support-intro">
+      DigiForge is independently developed by Mikal. If you would like to support continued development,
+      you can send a voluntary gift to one of these public wallet addresses.
+    </p>
+    <div class="support-grid">
+      <div class="support-wallet"><strong>BITCOIN · BTC</strong><code>bc1qhaj04fx5rts85ypavgxwgvlg44jhgje7ymsq0u</code></div>
+      <div class="support-wallet"><strong>ETHEREUM · ETH</strong><code>0x0E9f6aeb5537Dcca347c0c858989dd10CDBBB7b2</code></div>
+      <div class="support-wallet"><strong>DOGECOIN · DOGE</strong><code>D7zbwfjWY1KzWgtBtsiuhbdcoGutFH8pkd</code></div>
+      <div class="support-wallet"><strong>LITECOIN · LTC</strong><code>ltc1q67h4p7durruk8xkjz3yh6v3jrua5jxh9yy3s9q</code></div>
+      <div class="support-wallet"><strong>DIGIBYTE · DGB</strong><code>dgb1qy4h02rhasx2f8q7whn4sanfsdhgajhek34dsv5</code></div>
+    </div>
+  </section>
+
   <div class="footer">
-    <span>DigiForge v1.0.7 · by Mikal</span>
+    <span>DigiForge v1.0.8 · Developed by Mikal</span>
     <span>DigiByte Core + Miningcore are upstream open-source dependencies</span>
   </div>
 </div>
@@ -355,9 +390,11 @@ async function refresh(){
     $("nodeValue").innerHTML=n.online?'<span class="good-text">Online</span>':'<span class="bad-text">Offline</span>';
     $("nodeDetail").textContent=n.online?`${n.blocks||0} blocks · ${humanBytes(n.disk)}`:"Waiting for DigiByte Core";
     $("poolHash").textContent=humanHash(p.poolHashrate);
-    $("poolHashDetail").textContent=p.poolEstimateHashrate
-      ? `Miningcore estimate ${humanHash(p.poolEstimateHashrate)}`
-      : "Sum of active workers";
+    $("poolHashDetail").textContent=p.effectiveHashrate6h
+      ? `6h accepted-work estimate · Miningcore ${humanHash(p.poolEstimateHashrate)}`
+      : (p.poolEstimateHashrate
+          ? `Miningcore estimate ${humanHash(p.poolEstimateHashrate)}`
+          : "Live worker estimate");
     $("minerCount").textContent=p.connectedWorkers??(s.miners||[]).length??0;
     $("peerCount").textContent=n.connections??0;
     $("configured").textContent=s.configured?"Configured":"Needs DGB address";
