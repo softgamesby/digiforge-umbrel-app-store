@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-# DigiForge — DigiByte SHA256 mining hub
+# DigiForge — DigiByte multi-algorithm mining hub
 # Developed by Mikal
 import base64
 import json
 import os
 import re
 import urllib.request
+import urllib.parse
 import time
 from datetime import datetime, timezone
 from decimal import Decimal
@@ -43,12 +44,12 @@ RPC_PASSWORD = read_secret(RPC_PASSWORD_FILE, "DigiByte RPC")
 POSTGRES_PASSWORD = read_secret(POSTGRES_PASSWORD_FILE, "PostgreSQL")
 RPC_URL = "http://digibyted:14022/"
 MC_API = "http://miningcore:4000/api"
-POOL_ID = "dgb-sha256"
+SHA_POOL_ID = "dgb-sha256"
+SCRYPT_POOL_ID = "dgb-scrypt"
+POOL_ID = SHA_POOL_ID
+SCRYPT_STRATUM_PORT = "3258"
 
-DB_METRICS_CACHE = {
-    "expires": 0.0,
-    "value": None,
-}
+DB_METRICS_CACHE = {}
 DB_METRICS_TTL_SECONDS = 10
 
 def atomic_write(path, text):
@@ -81,23 +82,58 @@ def ensure_config():
             postgres_cfg["password"] = POSTGRES_PASSWORD
             changed = True
 
-    for pool in cfg.get("pools") or []:
-        if pool.get("id") != POOL_ID:
+    pools = cfg.setdefault("pools", [])
+    sha_pool = next(
+        (pool for pool in pools if pool.get("id") == SHA_POOL_ID),
+        None
+    )
+    sha_address = (
+        str(sha_pool.get("address", "")).strip()
+        if isinstance(sha_pool, dict)
+        else ""
+    )
+
+    for pool in pools:
+        pool_id = pool.get("id")
+        if pool_id not in (SHA_POOL_ID, SCRYPT_POOL_ID):
             continue
+
         for daemon in pool.get("daemons") or []:
             if daemon.get("password") != RPC_PASSWORD:
                 daemon["password"] = RPC_PASSWORD
                 changed = True
 
-        for key, value in miningcore_address_fields(pool.get("address", "")).items():
+        if pool_id == SCRYPT_POOL_ID and sha_address:
+            if pool.get("address") != sha_address:
+                pool["address"] = sha_address
+                changed = True
+
+        for key, value in miningcore_address_fields(
+            pool.get("address", "")
+        ).items():
             if pool.get(key) != value:
                 pool[key] = value
                 changed = True
 
         ports = pool.setdefault("ports", {})
-        if "3257" not in ports:
+        if pool_id == SHA_POOL_ID and "3257" not in ports:
             ports["3257"] = nerdminer_port_config()
             changed = True
+
+        if (
+            pool_id == SCRYPT_POOL_ID
+            and SCRYPT_STRATUM_PORT not in ports
+        ):
+            ports[SCRYPT_STRATUM_PORT] = scrypt_lg07_port_config()
+            changed = True
+
+    scrypt_pool = next(
+        (pool for pool in pools if pool.get("id") == SCRYPT_POOL_ID),
+        None
+    )
+    if sha_address and scrypt_pool is None:
+        pools.append(scrypt_pool_config(sha_address))
+        changed = True
 
     if changed:
         atomic_write(CONFIG, json.dumps(cfg, indent=2) + "\n")
@@ -108,7 +144,11 @@ def load_config():
 
 def current_address():
     pools = load_config().get("pools") or []
-    return str(pools[0].get("address", "")) if pools else ""
+    sha_pool = next(
+        (pool for pool in pools if pool.get("id") == SHA_POOL_ID),
+        None
+    )
+    return str(sha_pool.get("address", "")) if sha_pool else ""
 
 def valid_address_syntax(value):
     # Conservative syntax guard only. DigiByte/Miningcore perform
@@ -132,12 +172,25 @@ def nerdminer_port_config():
         "difficulty": 0.001,
     }
 
-def write_pool(address):
-    cfg = load_config()
-    cfg["pools"] = [{
-        "id": POOL_ID,
+def scrypt_lg07_port_config():
+    return {
+        "name": "DigiForge Scrypt · Lucky Miner LG07",
+        "listenAddress": "0.0.0.0",
+        "difficulty": 2048,
+        "varDiff": {
+            "minDiff": 512,
+            "maxDiff": 16384,
+            "targetTime": 15,
+            "retargetTime": 90,
+            "variancePercent": 30
+        }
+    }
+
+def pool_config(pool_id, coin, address, ports):
+    return {
+        "id": pool_id,
         "enabled": True,
-        "coin": "digibyte-sha256",
+        "coin": coin,
         "address": address,
         **miningcore_address_fields(address),
         "blockRefreshInterval": 500,
@@ -149,7 +202,27 @@ def write_pool(address):
             "invalidPercent": 50,
             "checkThreshold": 50
         },
-        "ports": {
+        "ports": ports,
+        "daemons": [{
+            "host": "digibyted",
+            "port": 14022,
+            "user": RPC_USER,
+            "password": RPC_PASSWORD
+        }],
+        "paymentProcessing": {
+            "enabled": False,
+            "minimumPayment": 10,
+            "payoutScheme": "PPLNS",
+            "payoutSchemeConfig": {"factor": 2.0}
+        }
+    }
+
+def sha256_pool_config(address):
+    return pool_config(
+        SHA_POOL_ID,
+        "digibyte-sha256",
+        address,
+        {
             "3256": {
                 "name": "DigiForge SHA256",
                 "listenAddress": "0.0.0.0",
@@ -163,20 +236,25 @@ def write_pool(address):
                 }
             },
             "3257": nerdminer_port_config()
-        },
-        "daemons": [{
-            "host": "digibyted",
-            "port": 14022,
-            "user": RPC_USER,
-            "password": RPC_PASSWORD
-        }],
-        "paymentProcessing": {
-            "enabled": False,
-            "minimumPayment": 10,
-            "payoutScheme": "PPLNS",
-            "payoutSchemeConfig": {"factor": 2.0}
         }
-    }]
+    )
+
+def scrypt_pool_config(address):
+    return pool_config(
+        SCRYPT_POOL_ID,
+        "digibyte-scrypt",
+        address,
+        {
+            SCRYPT_STRATUM_PORT: scrypt_lg07_port_config()
+        }
+    )
+
+def write_pool(address):
+    cfg = load_config()
+    cfg["pools"] = [
+        sha256_pool_config(address),
+        scrypt_pool_config(address),
+    ]
     atomic_write(CONFIG, json.dumps(cfg, indent=2) + "\n")
 
 def rpc(method, params=None):
@@ -201,24 +279,42 @@ def rpc(method, params=None):
         raise RuntimeError(str(body["error"]))
     return body.get("result")
 
+def digibyte_algorithm_stats():
+    info = rpc("getmininginfo")
+    difficulties = info.get("difficulties") or {}
+    network_hashrates = info.get("networkhashesps") or {}
+
+    return {
+        "sha256d": {
+            "algorithm": "sha256d",
+            "networkDifficulty": difficulties.get("sha256d", 0),
+            "networkHashrate": network_hashrates.get("sha256d", 0),
+        },
+        "scrypt": {
+            "algorithm": "scrypt",
+            "networkDifficulty": difficulties.get("scrypt", 0),
+            "networkHashrate": network_hashrates.get("scrypt", 0),
+        },
+    }
+
 def get_json(url):
     with urllib.request.urlopen(url, timeout=4) as response:
         return json.loads(response.read().decode())
 
-def miningcore_pool():
+def miningcore_pool(pool_id=POOL_ID):
     body = get_json(MC_API + "/pools")
     pools = body.get("pools", body) if isinstance(body, dict) else body
     if not isinstance(pools, list):
         return {}
     for pool in pools:
-        if pool.get("id") == POOL_ID:
+        if pool.get("id") == pool_id:
             return pool
-    return pools[0] if pools else {}
+    return {}
 
-def miningcore_miners():
+def miningcore_miners(pool_id=POOL_ID):
     urls = [
-        f"{MC_API}/pools/{POOL_ID}/miners?page=0&pageSize=50",
-        f"{MC_API}/pools/{POOL_ID}/miners"
+        f"{MC_API}/pools/{pool_id}/miners?page=0&pageSize=50",
+        f"{MC_API}/pools/{pool_id}/miners"
     ]
     last_error = None
     for url in urls:
@@ -232,16 +328,16 @@ def miningcore_miners():
             last_error = exc
     raise last_error or RuntimeError("miners endpoint unavailable")
 
-def miningcore_workers():
+def miningcore_workers(pool_id=POOL_ID):
     workers = []
 
-    for miner in miningcore_miners():
+    for miner in miningcore_miners(pool_id):
         miner_id = str(miner.get("miner") or "").strip()
         if not miner_id:
             continue
 
         try:
-            detail = get_json(f"{MC_API}/pools/{POOL_ID}/miners/{miner_id}")
+            detail = get_json(f"{MC_API}/pools/{pool_id}/miners/{miner_id}")
             performance = (detail.get("performance") or {}).get("workers") or {}
 
             if isinstance(performance, dict):
@@ -273,10 +369,11 @@ def db_fetch(cursor, sql, params=()):
         for row in cursor.fetchall()
     ]
 
-def miningcore_db_metrics():
+def miningcore_db_metrics(pool_id=POOL_ID):
     now = time.monotonic()
-    cached = DB_METRICS_CACHE.get("value")
-    if cached is not None and now < DB_METRICS_CACHE.get("expires", 0):
+    cache_entry = DB_METRICS_CACHE.get(pool_id) or {}
+    cached = cache_entry.get("value")
+    if cached is not None and now < cache_entry.get("expires", 0):
         return cached
 
     conn = pgdb.connect(
@@ -309,7 +406,7 @@ def miningcore_db_metrics():
             WHERE poolid = %s
             ORDER BY created DESC
             LIMIT 1
-        """, (POOL_ID,))
+        """, (pool_id,))
         pool_stats = pool_rows[0] if pool_rows else {}
 
         worker_stats = db_fetch(cursor, """
@@ -324,7 +421,7 @@ def miningcore_db_metrics():
               AND worker IS NOT NULL
               AND worker <> ''
             ORDER BY worker, created DESC
-        """, (POOL_ID,))
+        """, (pool_id,))
 
         share_stats = db_fetch(cursor, """
             SELECT
@@ -342,7 +439,7 @@ def miningcore_db_metrics():
             WHERE poolid = %s
             GROUP BY COALESCE(NULLIF(worker, ''), 'default'), miner
             ORDER BY MAX(created) DESC
-        """, (POOL_ID,))
+        """, (pool_id,))
 
         effective_hashrate_rows = db_fetch(cursor, """
             SELECT
@@ -354,7 +451,7 @@ def miningcore_db_metrics():
             FROM shares
             WHERE poolid = %s
               AND created > NOW() - INTERVAL '6 hours'
-        """, (POOL_ID,))
+        """, (pool_id,))
         effective_hashrate = (
             effective_hashrate_rows[0]
             if effective_hashrate_rows else {}
@@ -376,7 +473,7 @@ def miningcore_db_metrics():
             WHERE poolid = %s
             ORDER BY created DESC
             LIMIT 10
-        """, (POOL_ID,))
+        """, (pool_id,))
 
         block_summary_rows = db_fetch(cursor, """
             SELECT
@@ -393,7 +490,7 @@ def miningcore_db_metrics():
                 MAX(created) AS lastblock
             FROM blocks
             WHERE poolid = %s
-        """, (POOL_ID,))
+        """, (pool_id,))
         block_summary = block_summary_rows[0] if block_summary_rows else {}
 
         cursor.execute("""
@@ -402,7 +499,7 @@ def miningcore_db_metrics():
             WHERE poolid = %s
             ORDER BY created DESC
             LIMIT 1
-        """, (POOL_ID,))
+        """, (pool_id,))
         last_block = cursor.fetchone()
         round_start = last_block[0] if last_block else None
 
@@ -418,7 +515,7 @@ def miningcore_db_metrics():
                     ) AS effortpercent
                 FROM shares
                 WHERE poolid = %s
-            """, (POOL_ID,))
+            """, (pool_id,))
         else:
             round_rows = db_fetch(cursor, """
                 SELECT
@@ -432,7 +529,7 @@ def miningcore_db_metrics():
                 FROM shares
                 WHERE poolid = %s
                   AND created > %s
-            """, (POOL_ID, round_start))
+            """, (pool_id, round_start))
 
         current_round = round_rows[0] if round_rows else {}
 
@@ -445,11 +542,60 @@ def miningcore_db_metrics():
             "blockSummary": block_summary,
             "round": current_round,
         }
-        DB_METRICS_CACHE["value"] = result
-        DB_METRICS_CACHE["expires"] = (
-            time.monotonic() + DB_METRICS_TTL_SECONDS
-        )
+        DB_METRICS_CACHE[pool_id] = {
+            "value": result,
+            "expires": time.monotonic() + DB_METRICS_TTL_SECONDS,
+        }
         return result
+    finally:
+        conn.close()
+
+def miningcore_db_history(pool_id, hours):
+    ranges = {
+        1: 60,
+        6: 180,
+        24: 600,
+        168: 3600,
+    }
+    if hours not in ranges:
+        raise ValueError("Unsupported history range")
+
+    bucket_seconds = ranges[hours]
+
+    conn = pgdb.connect(
+        host="postgres",
+        port=5432,
+        database="miningcore",
+        user="miningcore",
+        password=POSTGRES_PASSWORD,
+        timeout=3,
+    )
+
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SET TRANSACTION READ ONLY")
+
+        return db_fetch(cursor, """
+            SELECT
+                to_timestamp(
+                    floor(extract(epoch FROM created) / %s) * %s
+                ) AS created,
+                AVG(poolhashrate) AS poolhashrate,
+                AVG(sharespersecond) AS sharespersecond,
+                AVG(networkhashrate) AS networkhashrate,
+                AVG(networkdifficulty) AS networkdifficulty,
+                AVG(connectedminers) AS connectedminers
+            FROM poolstats
+            WHERE poolid = %s
+              AND created > NOW() - (%s * INTERVAL '1 hour')
+            GROUP BY 1
+            ORDER BY created ASC
+        """, (
+            bucket_seconds,
+            bucket_seconds,
+            pool_id,
+            hours,
+        ))
     finally:
         conn.close()
 
@@ -531,6 +677,138 @@ def merge_worker_metrics(live_workers, db_metrics):
     ))
     return merged
 
+def pool_status_snapshot(pool_id, stratum_port, network_stats=None):
+    result = {
+        "pool": {
+            "online": False,
+            "stratum": False,
+            "id": pool_id,
+        },
+        "miners": [],
+        "performance": {},
+        "round": {},
+        "blocks": [],
+        "blockSummary": {},
+    }
+
+    try:
+        pool = miningcore_pool(pool_id)
+        stats = pool.get("poolStats") or {}
+        network = pool.get("networkStats") or {}
+        ports = pool.get("ports") or {}
+
+        result["pool"].update({
+            "online": bool(pool),
+            "stratum": bool(pool) and str(stratum_port) in ports,
+            "id": pool.get("id") or pool_id,
+            "connectedMiners": stats.get("connectedMiners", 0),
+            "poolHashrate": stats.get("poolHashrate", 0),
+            "poolEstimateHashrate": stats.get("poolHashrate", 0),
+            "sharesPerSecond": stats.get("sharesPerSecond", 0),
+            "networkHashrate": network.get("networkHashrate", 0),
+            "networkDifficulty": network.get("networkDifficulty", 0),
+            "blockHeight": network.get("blockHeight", 0),
+        })
+
+        try:
+            live_workers = miningcore_workers(pool_id)
+        except Exception as exc:
+            live_workers = []
+            result["minersError"] = str(exc)
+
+        fallback_workers = []
+        for worker in live_workers:
+            fallback = dict(worker)
+            fallback["status"] = "active"
+            fallback["historyAvailable"] = False
+            fallback_workers.append(fallback)
+
+        result["miners"] = fallback_workers
+        result["pool"]["connectedWorkers"] = len(fallback_workers)
+
+        if fallback_workers:
+            result["pool"]["poolHashrate"] = sum(
+                float(worker.get("hashrate") or 0)
+                for worker in fallback_workers
+            )
+
+        try:
+            db_metrics = miningcore_db_metrics(pool_id)
+            workers = merge_worker_metrics(live_workers, db_metrics)
+
+            for worker in workers:
+                worker["historyAvailable"] = True
+
+            result["miners"] = workers
+            result["performance"] = db_metrics.get("poolStats", {})
+            result["round"] = db_metrics.get("round", {})
+            result["blocks"] = db_metrics.get("blocks", [])
+            result["blockSummary"] = db_metrics.get("blockSummary", {})
+
+            active_workers = [
+                worker for worker in workers
+                if worker.get("status") == "active"
+            ]
+            result["pool"]["connectedWorkers"] = len(active_workers)
+
+            effective = db_metrics.get("effectiveHashrate", {})
+            effective_hashrate = float(
+                effective.get("effectivehashrate6h") or 0
+            )
+            if effective_hashrate > 0:
+                result["pool"]["poolHashrate"] = effective_hashrate
+                result["pool"]["effectiveHashrate6h"] = effective_hashrate
+                result["pool"]["effectiveHashrateShares6h"] = int(
+                    effective.get("shares6h") or 0
+                )
+
+            perf = result["performance"]
+            if not result["pool"].get("networkHashrate"):
+                result["pool"]["networkHashrate"] = perf.get(
+                    "networkhashrate", 0
+                )
+            if not result["pool"].get("networkDifficulty"):
+                result["pool"]["networkDifficulty"] = perf.get(
+                    "networkdifficulty", 0
+                )
+        except Exception as exc:
+            result["performanceError"] = str(exc)
+
+        network_stats = network_stats or {}
+        if network_stats.get("networkHashrate"):
+            result["pool"]["networkHashrate"] = (
+                network_stats["networkHashrate"]
+            )
+        if network_stats.get("networkDifficulty"):
+            result["pool"]["networkDifficulty"] = (
+                network_stats["networkDifficulty"]
+            )
+        if network_stats.get("algorithm"):
+            result["pool"]["algorithm"] = network_stats["algorithm"]
+
+        pool_hashrate = float(result["pool"].get("poolHashrate") or 0)
+        network_hashrate = float(
+            result["pool"].get("networkHashrate") or 0
+        )
+        network_difficulty = float(
+            result["pool"].get("networkDifficulty") or 0
+        )
+
+        result["pool"]["networkSharePercent"] = (
+            100.0 * pool_hashrate / network_hashrate
+            if pool_hashrate > 0 and network_hashrate > 0
+            else None
+        )
+        result["pool"]["expectedBlockTimeSeconds"] = (
+            network_difficulty * (2 ** 32) / pool_hashrate
+            if pool_hashrate > 0 and network_difficulty > 0
+            else None
+        )
+    except Exception as exc:
+        result["pool"]["error"] = str(exc)
+
+    return result
+
 class Handler(BaseHTTPRequestHandler):
     server_version = "DigiForge/1.0.8"
 
@@ -561,8 +839,71 @@ class Handler(BaseHTTPRequestHandler):
             return self.send_file("index.html", "text/html; charset=utf-8")
         if path == "/icon.svg":
             return self.send_file("icon.svg", "image/svg+xml")
+
+        support_images = {
+            "/support/btc.png": "support/btc.png",
+            "/support/eth.png": "support/eth.png",
+            "/support/doge.png": "support/doge.png",
+            "/support/ltc.png": "support/ltc.png",
+            "/support/dgb.png": "support/dgb.png",
+        }
+        if path in support_images:
+            return self.send_file(
+                support_images[path],
+                "image/png"
+            )
+
         if path == "/api/health":
             return self.send_json({"ok": True, "version": "1.0.8"})
+
+        if path == "/api/history":
+            query = urllib.parse.parse_qs(
+                urllib.parse.urlsplit(self.path).query
+            )
+            algorithm = str(
+                (query.get("algorithm") or ["sha256d"])[0]
+            ).lower()
+            range_name = str(
+                (query.get("range") or ["24h"])[0]
+            ).lower()
+
+            algorithms = {
+                "sha256d": SHA_POOL_ID,
+                "scrypt": SCRYPT_POOL_ID,
+            }
+            ranges = {
+                "1h": 1,
+                "6h": 6,
+                "24h": 24,
+                "7d": 168,
+            }
+
+            if algorithm not in algorithms:
+                return self.send_json(
+                    {"error": "Unsupported algorithm"},
+                    400
+                )
+            if range_name not in ranges:
+                return self.send_json(
+                    {"error": "Unsupported history range"},
+                    400
+                )
+
+            try:
+                points = miningcore_db_history(
+                    algorithms[algorithm],
+                    ranges[range_name],
+                )
+                return self.send_json({
+                    "algorithm": algorithm,
+                    "range": range_name,
+                    "points": points,
+                })
+            except Exception as exc:
+                return self.send_json(
+                    {"error": str(exc)},
+                    500
+                )
 
         if path == "/api/status":
             result = {
@@ -595,113 +936,31 @@ class Handler(BaseHTTPRequestHandler):
             except Exception as exc:
                 result["node"]["error"] = str(exc)
 
+            algorithm_stats = {}
             try:
-                pool = miningcore_pool()
-                stats = pool.get("poolStats") or {}
-                network = pool.get("networkStats") or {}
-                ports = pool.get("ports") or {}
-                result["pool"].update({
-                    "online": bool(pool),
-                    "stratum": bool(pool) and "3256" in ports,
-                    "id": pool.get("id"),
-                    "connectedMiners": stats.get("connectedMiners", 0),
-                    "poolHashrate": stats.get("poolHashrate", 0),
-                    "poolEstimateHashrate": stats.get("poolHashrate", 0),
-                    "sharesPerSecond": stats.get("sharesPerSecond", 0),
-                    "networkHashrate": network.get("networkHashrate", 0),
-                    "networkDifficulty": network.get("networkDifficulty", 0),
-                    "blockHeight": network.get("blockHeight", 0)
-                })
-                try:
-                    live_workers = miningcore_workers()
-                except Exception as exc:
-                    live_workers = []
-                    result["minersError"] = str(exc)
-
-                # Preserve live Miningcore worker visibility even if the
-                # optional PostgreSQL history/round metrics are unavailable.
-                fallback_workers = []
-                for worker in live_workers:
-                    fallback = dict(worker)
-                    fallback["status"] = "active"
-                    fallback["historyAvailable"] = False
-                    fallback_workers.append(fallback)
-
-                result["miners"] = fallback_workers
-                result["pool"]["connectedWorkers"] = len(fallback_workers)
-
-                if fallback_workers:
-                    result["pool"]["poolHashrate"] = sum(
-                        float(worker.get("hashrate") or 0)
-                        for worker in fallback_workers
-                    )
-
-                try:
-                    db_metrics = miningcore_db_metrics()
-                    workers = merge_worker_metrics(live_workers, db_metrics)
-
-                    for worker in workers:
-                        worker["historyAvailable"] = True
-
-                    result["miners"] = workers
-                    result["performance"] = db_metrics.get("poolStats", {})
-                    result["round"] = db_metrics.get("round", {})
-                    result["blocks"] = db_metrics.get("blocks", [])
-                    result["blockSummary"] = db_metrics.get("blockSummary", {})
-
-                    active_workers = [
-                        worker for worker in workers
-                        if worker.get("status") == "active"
-                    ]
-                    result["pool"]["connectedWorkers"] = len(active_workers)
-
-                    effective = db_metrics.get("effectiveHashrate", {})
-                    effective_hashrate = float(
-                        effective.get("effectivehashrate6h") or 0
-                    )
-                    if effective_hashrate > 0:
-                        result["pool"]["poolHashrate"] = effective_hashrate
-                        result["pool"]["effectiveHashrate6h"] = (
-                            effective_hashrate
-                        )
-                        result["pool"]["effectiveHashrateShares6h"] = int(
-                            effective.get("shares6h") or 0
-                        )
-
-                    perf = result["performance"]
-                    if not result["pool"].get("networkHashrate"):
-                        result["pool"]["networkHashrate"] = perf.get(
-                            "networkhashrate", 0
-                        )
-                    if not result["pool"].get("networkDifficulty"):
-                        result["pool"]["networkDifficulty"] = perf.get(
-                            "networkdifficulty", 0
-                        )
-                except Exception as exc:
-                    result["performanceError"] = str(exc)
-
-                pool_hashrate = float(
-                    result["pool"].get("poolHashrate") or 0
-                )
-                network_hashrate = float(
-                    result["pool"].get("networkHashrate") or 0
-                )
-                network_difficulty = float(
-                    result["pool"].get("networkDifficulty") or 0
-                )
-
-                result["pool"]["networkSharePercent"] = (
-                    100.0 * pool_hashrate / network_hashrate
-                    if pool_hashrate > 0 and network_hashrate > 0
-                    else None
-                )
-                result["pool"]["expectedBlockTimeSeconds"] = (
-                    network_difficulty * (2 ** 32) / pool_hashrate
-                    if pool_hashrate > 0 and network_difficulty > 0
-                    else None
-                )
+                algorithm_stats = digibyte_algorithm_stats()
             except Exception as exc:
-                result["pool"]["error"] = str(exc)
+                result["algorithmStatsError"] = str(exc)
+
+            sha256 = pool_status_snapshot(
+                SHA_POOL_ID,
+                "3256",
+                algorithm_stats.get("sha256d"),
+            )
+            scrypt = pool_status_snapshot(
+                SCRYPT_POOL_ID,
+                SCRYPT_STRATUM_PORT,
+                algorithm_stats.get("scrypt"),
+            )
+
+            # Preserve the original SHA256 top-level API for compatibility.
+            result.update(sha256)
+
+            # DigiForge 1.1.0 multi-algorithm API.
+            result["algorithms"] = {
+                "sha256d": sha256,
+                "scrypt": scrypt,
+            }
 
             return self.send_json(result)
 
@@ -730,7 +989,7 @@ class Handler(BaseHTTPRequestHandler):
             return self.send_json({
                 "ok": True,
                 "address": address,
-                "message": "Saved. DigiForge is starting the SHA256 pool automatically."
+                "message": "Saved. DigiForge is starting the SHA256 and Scrypt pools automatically."
             })
         except Exception as exc:
             return self.send_json({"error": str(exc)}, 500)

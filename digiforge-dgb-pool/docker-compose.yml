@@ -104,6 +104,7 @@ services:
     ports:
       - "3256:3256/tcp"
       - "3257:3257/tcp"
+      - "3258:3258/tcp"
     networks:
       backend:
         ipv4_address: 172.29.36.30

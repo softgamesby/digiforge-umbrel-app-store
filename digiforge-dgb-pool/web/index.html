@@ -126,8 +126,96 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;word
 .support-wallet strong{display:block;font-size:12px;letter-spacing:.08em;color:var(--accent2);margin-bottom:7px}
 .support-wallet code{display:block;line-height:1.5}
 .support-wallet:last-child:nth-child(odd){grid-column:1/-1}
+.support-wallet{
+ display:grid;grid-template-columns:minmax(0,1fr) auto;
+ gap:14px;align-items:center
+}
+.support-wallet-copy{min-width:0}
+.support-qr{
+ width:84px;height:84px;border-radius:12px;background:#fff;
+ padding:5px;object-fit:contain;border:1px solid rgba(255,255,255,.12)
+}
+.support-heading{
+ display:flex;align-items:center;gap:8px;flex-wrap:wrap
+}
+.support-heading span{
+ color:var(--muted);font-size:10px;font-weight:700;letter-spacing:.07em
+}
+.support-note{
+ margin-top:12px;padding:12px 14px;border:1px solid #26334a;
+ border-radius:13px;background:#080e1a;color:var(--muted);
+ font-size:12px;line-height:1.55
+}
 .good-text{color:var(--good)}.warn-text{color:var(--warn)}.bad-text{color:var(--bad)}
 .footer{display:flex;justify-content:space-between;gap:18px;flex-wrap:wrap;margin-top:22px;color:#697792;font-size:12px}
+.algo-toolbar{
+ display:flex;align-items:center;justify-content:space-between;gap:14px;
+ margin:14px 0;flex-wrap:wrap
+}
+.algo-tabs,.range-tabs{
+ display:inline-flex;gap:4px;padding:4px;border:1px solid var(--border);
+ border-radius:14px;background:#080e1a
+}
+.algo-tab,.range-tab{
+ border:0;background:transparent;color:var(--muted);cursor:pointer;
+ padding:9px 13px;border-radius:10px;font-weight:750;font-size:12px;
+ transition:.18s
+}
+.algo-tab:hover,.range-tab:hover{color:var(--text);background:#111b2e}
+.algo-tab.active,.range-tab.active{
+ color:#fff;background:linear-gradient(135deg,#556cff,#6d5df5);
+ box-shadow:0 6px 20px rgba(80,96,255,.18)
+}
+.algo-context{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.algo-badge{
+ display:inline-flex;align-items:center;gap:7px;border-radius:999px;
+ padding:7px 10px;font-size:11px;font-weight:800;letter-spacing:.07em;
+ text-transform:uppercase;border:1px solid rgba(36,212,192,.30);
+ color:var(--accent2);background:rgba(36,212,192,.07)
+}
+.algo-port{
+ color:var(--muted);font-size:12px;border-left:1px solid var(--border);
+ padding-left:10px
+}
+.chart-grid{
+ display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:14px 0
+}
+.chart-panel{
+ border:1px solid var(--border);border-radius:var(--radius);
+ background:rgba(14,21,37,.84);padding:18px;min-width:0
+}
+.chart-head{
+ display:flex;align-items:flex-start;justify-content:space-between;
+ gap:12px;margin-bottom:12px
+}
+.chart-title{font-size:15px;font-weight:760}
+.chart-subtitle{font-size:11px;color:var(--muted);margin-top:3px}
+.chart-wrap{
+ position:relative;height:230px;border-radius:14px;overflow:hidden;
+ background:linear-gradient(180deg,rgba(17,27,46,.55),rgba(8,14,26,.45));
+ border:1px solid #202c42
+}
+.chart-wrap canvas{display:block;width:100%;height:100%}
+.chart-empty{
+ position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+ color:var(--muted);font-size:12px;pointer-events:none
+}
+.chart-legend{
+ display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;
+ color:var(--muted);font-size:11px
+}
+.legend-item{display:inline-flex;align-items:center;gap:6px}
+.legend-dot{
+ width:7px;height:7px;border-radius:50%;background:var(--accent)
+}
+.legend-dot.alt{background:var(--accent2)}
+.section-kicker{
+ color:var(--accent2);font-size:11px;font-weight:800;letter-spacing:.09em;
+ text-transform:uppercase;margin-bottom:5px
+}
+@media(max-width:900px){
+ .chart-grid{grid-template-columns:1fr}
+}
 @media(max-width:900px){.grid{grid-template-columns:repeat(2,1fr)}.two{grid-template-columns:1fr}}
 @media(max-width:560px){
  .shell{padding:20px 14px 54px}.topbar{align-items:flex-start}.status-text{display:none}
@@ -167,7 +255,7 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;word
   <circle cx="193" cy="99" r="3" fill="#45DFF7"/>
   <circle cx="184" cy="119" r="2.5" fill="#8CFAFF"/>
 </svg>
-      <div><div class="title">DigiForge</div><div class="subtitle">DigiByte SHA256 mining hub · Developed by Mikal</div></div>
+      <div><div class="title">DigiForge</div><div class="subtitle">DigiByte multi-algorithm mining hub · Developed by Mikal</div></div>
     </div>
     <div class="top-actions">
       <a class="support-link" href="#support">Support DigiForge</a>
@@ -178,7 +266,7 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;word
   <section class="hero">
     <div class="hero-row">
       <div>
-        <div class="eyebrow">Private mining infrastructure</div>
+        <div class="eyebrow">Private multi-algorithm mining infrastructure</div>
         <h1 id="heroTitle">Syncing DigiByte</h1>
         <p id="heroText">Your node, pool and miner data stay on your Umbrel. Configure one reward address and DigiForge handles the local pool setup.</p>
       </div>
@@ -189,6 +277,59 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;word
       <div class="progress"><div id="syncBar"></div></div>
     </div>
   </section>
+
+  <div class="algo-toolbar">
+    <div class="algo-tabs" role="tablist" aria-label="Mining algorithm">
+      <button class="algo-tab active" data-algo="sha256d" onclick="selectAlgorithm('sha256d')">SHA256</button>
+      <button class="algo-tab" data-algo="scrypt" onclick="selectAlgorithm('scrypt')">Scrypt · LG07</button>
+    </div>
+    <div class="algo-context">
+      <span id="algoBadge" class="algo-badge">SHA256 · ASIC</span>
+      <span id="algoPort" class="algo-port">Ports 3256 / 3257</span>
+    </div>
+  </div>
+
+  <div class="chart-grid">
+    <section class="chart-panel">
+      <div class="chart-head">
+        <div>
+          <div class="section-kicker">Performance</div>
+          <div id="hashChartTitle" class="chart-title">SHA256 pool hashrate</div>
+          <div class="chart-subtitle">Historical Miningcore pool estimate</div>
+        </div>
+        <div class="range-tabs" aria-label="Performance history range">
+          <button class="range-tab" data-range="1h" onclick="selectHistoryRange('1h')">1h</button>
+          <button class="range-tab" data-range="6h" onclick="selectHistoryRange('6h')">6h</button>
+          <button class="range-tab active" data-range="24h" onclick="selectHistoryRange('24h')">24h</button>
+          <button class="range-tab" data-range="7d" onclick="selectHistoryRange('7d')">7d</button>
+        </div>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="hashChart"></canvas>
+        <div id="hashChartEmpty" class="chart-empty">Loading performance history…</div>
+      </div>
+      <div class="chart-legend">
+        <span class="legend-item"><span class="legend-dot"></span>Pool hashrate</span>
+      </div>
+    </section>
+
+    <section class="chart-panel">
+      <div class="chart-head">
+        <div>
+          <div class="section-kicker">Network</div>
+          <div id="networkChartTitle" class="chart-title">SHA256 network hashrate</div>
+          <div class="chart-subtitle">DigiByte network trend for the selected algorithm</div>
+        </div>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="networkChart"></canvas>
+        <div id="networkChartEmpty" class="chart-empty">Loading network history…</div>
+      </div>
+      <div class="chart-legend">
+        <span class="legend-item"><span class="legend-dot alt"></span>Network hashrate</span>
+      </div>
+    </section>
+  </div>
 
   <section class="grid">
     <div class="card"><div class="label">Node</div><div id="nodeValue" class="value">—</div><div id="nodeDetail" class="detail">Checking</div></div>
@@ -227,7 +368,7 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;word
 
   <section class="two">
     <div class="panel">
-      <div class="panel-head"><h2>Mining round</h2><span class="small">Probabilistic</span></div>
+      <div class="panel-head"><h2 id="roundTitle">SHA256 mining round</h2><span class="small">Probabilistic</span></div>
       <div class="metric-list">
         <div class="metric-row"><span>Accepted shares this round</span><strong id="roundShares">—</strong></div>
         <div class="metric-row"><span>Round started</span><strong id="roundStarted">—</strong></div>
@@ -242,7 +383,7 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;word
     </div>
 
     <div class="panel">
-      <div class="panel-head"><h2>Pool performance</h2><span class="small">Miningcore</span></div>
+      <div class="panel-head"><h2 id="performanceTitle">SHA256 pool performance</h2><span class="small">Miningcore</span></div>
       <div class="metric-list">
         <div class="metric-row"><span>Miningcore pool estimate</span><strong id="perfPoolHash">—</strong></div>
         <div class="metric-row"><span>Pool shares / second</span><strong id="perfSharesSecond">—</strong></div>
@@ -255,7 +396,7 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;word
   </section>
 
   <section class="panel" style="margin:14px 0">
-    <div class="panel-head"><h2>Pool blocks</h2><span class="small">Latest 10</span></div>
+    <div class="panel-head"><h2 id="blocksTitle">SHA256 blocks found</h2><span class="small">Latest 10</span></div>
     <div id="blocks"><div class="empty">No pool blocks found yet.</div></div>
   </section>
 
@@ -281,10 +422,16 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;word
       <div class="codebox"><code id="nerdWorkerUser1">YOUR_DGB_ADDRESS.nrd1</code><button class="btn secondary" onclick="copyText('nerdWorkerUser1')">Copy</button></div>
       <div class="codebox" style="margin-top:8px"><code id="nerdWorkerUser2">YOUR_DGB_ADDRESS.nrd2</code><button class="btn secondary" onclick="copyText('nerdWorkerUser2')">Copy</button></div>
       <div class="small" style="margin-top:10px">Password: <code>x</code> · fixed difficulty 0.001</div>
+
+      <div style="margin-top:22px" class="small">Lucky Miner LG07 · Scrypt pool URL</div>
+      <div class="codebox"><code id="scryptPoolUrl">stratum+tcp://umbrel.local:3258</code><button class="btn secondary" onclick="copyText('scryptPoolUrl')">Copy</button></div>
+      <div style="margin-top:12px" class="small">Lucky Miner LG07 worker</div>
+      <div class="codebox"><code id="scryptWorkerUser">YOUR_DGB_ADDRESS.LG07</code><button class="btn secondary" onclick="copyText('scryptWorkerUser')">Copy</button></div>
+      <div class="small" style="margin-top:10px">Password: <code>x</code> · Scrypt · VarDiff 512–16384 · target 15 s</div>
     </div>
 
     <div class="panel">
-      <div class="panel-head"><h2>Active workers</h2><span class="small">Live</span></div>
+      <div class="panel-head"><h2 id="workersTitle">SHA256 workers</h2><span class="small">Live</span></div>
       <div id="miners"><div class="empty">No active workers yet.</div></div>
     </div>
   </section>
@@ -299,11 +446,49 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;word
       you can send a voluntary gift to one of these public wallet addresses.
     </p>
     <div class="support-grid">
-      <div class="support-wallet"><strong>BITCOIN · BTC</strong><code>bc1qhaj04fx5rts85ypavgxwgvlg44jhgje7ymsq0u</code></div>
-      <div class="support-wallet"><strong>ETHEREUM · ETH</strong><code>0x0E9f6aeb5537Dcca347c0c858989dd10CDBBB7b2</code></div>
-      <div class="support-wallet"><strong>DOGECOIN · DOGE</strong><code>D7zbwfjWY1KzWgtBtsiuhbdcoGutFH8pkd</code></div>
-      <div class="support-wallet"><strong>LITECOIN · LTC</strong><code>ltc1q67h4p7durruk8xkjz3yh6v3jrua5jxh9yy3s9q</code></div>
-      <div class="support-wallet"><strong>DIGIBYTE · DGB</strong><code>dgb1qy4h02rhasx2f8q7whn4sanfsdhgajhek34dsv5</code></div>
+      <div class="support-wallet">
+        <div class="support-wallet-copy">
+          <div class="support-heading"><strong>BITCOIN · BTC</strong><span>SUPPORT DIGIFORGE</span></div>
+          <code>bc1qhaj04fx5rts85ypavgxwgvlg44jhgje7ymsq0u</code>
+        </div>
+        <img class="support-qr" src="/support/btc.png" alt="Bitcoin support wallet QR code">
+      </div>
+
+      <div class="support-wallet">
+        <div class="support-wallet-copy">
+          <div class="support-heading"><strong>ETHEREUM · ETH</strong><span>SUPPORT DIGIFORGE</span></div>
+          <code>0x0E9f6aeb5537Dcca347c0c858989dd10CDBBB7b2</code>
+        </div>
+        <img class="support-qr" src="/support/eth.png" alt="Ethereum support wallet QR code">
+      </div>
+
+      <div class="support-wallet">
+        <div class="support-wallet-copy">
+          <div class="support-heading"><strong>DOGECOIN · DOGE</strong><span>SUPPORT DIGIFORGE</span></div>
+          <code>D7zbwfjWY1KzWgtBtsiuhbdcoGutFH8pkd</code>
+        </div>
+        <img class="support-qr" src="/support/doge.png" alt="Dogecoin support wallet QR code">
+      </div>
+
+      <div class="support-wallet">
+        <div class="support-wallet-copy">
+          <div class="support-heading"><strong>LITECOIN · LTC</strong><span>SUPPORT DIGIFORGE</span></div>
+          <code>ltc1q67h4p7durruk8xkjz3yh6v3jrua5jxh9yy3s9q</code>
+        </div>
+        <img class="support-qr" src="/support/ltc.png" alt="Litecoin support wallet QR code">
+      </div>
+
+      <div class="support-wallet">
+        <div class="support-wallet-copy">
+          <div class="support-heading"><strong>DIGIBYTE · DGB</strong><span>SUPPORT DIGIFORGE</span></div>
+          <code>dgb1qy4h02rhasx2f8q7whn4sanfsdhgajhek34dsv5</code>
+        </div>
+        <img class="support-qr" src="/support/dgb.png" alt="DigiByte support wallet QR code">
+      </div>
+    </div>
+
+    <div class="support-note">
+      Support addresses are public receiving addresses only. Mining rewards are sent to the DigiByte reward address configured in DigiForge.
     </div>
   </section>
 
@@ -315,6 +500,62 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;word
 
 <script>
 const $=id=>document.getElementById(id);
+
+let selectedAlgorithm="sha256d";
+let selectedHistoryRange="24h";
+
+const algorithmUi={
+  sha256d:{
+    title:"SHA256",
+    badge:"SHA256 · ASIC",
+    port:"Ports 3256 / 3257"
+  },
+  scrypt:{
+    title:"Scrypt",
+    badge:"Scrypt · LG07",
+    port:"Port 3258"
+  }
+};
+
+function selectAlgorithm(algorithm){
+  if(!algorithmUi[algorithm])return;
+  selectedAlgorithm=algorithm;
+
+  document.querySelectorAll(".algo-tab").forEach(button=>{
+    button.classList.toggle(
+      "active",
+      button.dataset.algo===algorithm
+    );
+  });
+
+  const ui=algorithmUi[algorithm];
+  $("algoBadge").textContent=ui.badge;
+  $("algoPort").textContent=ui.port;
+  $("hashChartTitle").textContent=`${ui.title} pool hashrate`;
+  $("networkChartTitle").textContent=`${ui.title} network hashrate`;
+  $("roundTitle").textContent=`${ui.title} mining round`;
+  $("performanceTitle").textContent=`${ui.title} pool performance`;
+  $("blocksTitle").textContent=`${ui.title} blocks found`;
+  $("workersTitle").textContent=`${ui.title} workers`;
+
+  refresh();
+  loadHistory();
+}
+
+function selectHistoryRange(range){
+  if(!["1h","6h","24h","7d"].includes(range))return;
+  selectedHistoryRange=range;
+
+  document.querySelectorAll(".range-tab").forEach(button=>{
+    button.classList.toggle(
+      "active",
+      button.dataset.range===range
+    );
+  });
+
+  if(typeof loadHistory==="function")loadHistory();
+}
+
 function humanBytes(n){
   if(!n)return "—"; const units=["B","KB","MB","GB","TB"]; let i=0,v=Number(n);
   while(v>=1024&&i<units.length-1){v/=1024;i++}
@@ -335,6 +576,8 @@ function updateConnectionText(address){
   $("nerdPoolUrl").textContent=`stratum+tcp://${poolHost()}:3257`;
   $("nerdWorkerUser1").textContent=minerAddress+".nrd1";
   $("nerdWorkerUser2").textContent=minerAddress+".nrd2";
+  $("scryptPoolUrl").textContent=`stratum+tcp://${poolHost()}:3258`;
+  $("scryptWorkerUser").textContent=minerAddress+".LG07";
 }
 async function copyText(id){
   try{await navigator.clipboard.writeText($(id).textContent)}catch(e){}
@@ -379,10 +622,191 @@ function shortHash(value){
   if(v.length<=24)return v||"—";
   return v.slice(0,12)+"…"+v.slice(-12);
 }
+let lastHistoryPoints=[];
+
+function chartColor(variable,fallback){
+  const value=getComputedStyle(document.documentElement)
+    .getPropertyValue(variable).trim();
+  return value||fallback;
+}
+
+function historyTimeLabel(value){
+  const d=new Date(value);
+  if(Number.isNaN(d.getTime()))return "";
+  if(selectedHistoryRange==="7d"){
+    return d.toLocaleDateString(undefined,{month:"short",day:"numeric"});
+  }
+  return d.toLocaleTimeString(undefined,{hour:"2-digit",minute:"2-digit"});
+}
+
+function drawHashChart(canvasId,emptyId,points,key){
+  const canvas=$(canvasId);
+  const empty=$(emptyId);
+  if(!canvas||!empty)return;
+
+  const clean=(Array.isArray(points)?points:[])
+    .map(point=>({
+      created:point.created,
+      value:Number(point[key])
+    }))
+    .filter(point=>Number.isFinite(point.value)&&point.value>=0);
+
+  lastHistoryPoints=Array.isArray(points)?points:[];
+
+  if(!clean.length||!clean.some(point=>point.value>0)){
+    empty.hidden=false;
+    empty.textContent=selectedAlgorithm==="scrypt"
+      ? "No Scrypt history yet. Connect the LG07 to begin recording performance."
+      : "No performance history available yet.";
+    const ctx=canvas.getContext("2d");
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    return;
+  }
+
+  empty.hidden=true;
+
+  const rect=canvas.getBoundingClientRect();
+  const dpr=Math.max(1,window.devicePixelRatio||1);
+  const width=Math.max(320,rect.width);
+  const height=Math.max(180,rect.height);
+
+  canvas.width=Math.round(width*dpr);
+  canvas.height=Math.round(height*dpr);
+
+  const ctx=canvas.getContext("2d");
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  ctx.clearRect(0,0,width,height);
+
+  const left=58,right=14,top=16,bottom=30;
+  const plotW=width-left-right;
+  const plotH=height-top-bottom;
+  const max=Math.max(...clean.map(point=>point.value));
+  const yMax=max*1.08||1;
+
+  const border=chartColor("--border","#22304a");
+  const muted=chartColor("--muted","#8f9db8");
+  const line=key==="poolhashrate"
+    ? chartColor("--accent","#7180ff")
+    : chartColor("--accent2","#24d4c0");
+
+  ctx.lineWidth=1;
+  ctx.strokeStyle=border;
+  ctx.fillStyle=muted;
+  ctx.font='11px Inter,system-ui,sans-serif';
+  ctx.textBaseline="middle";
+
+  for(let i=0;i<=4;i++){
+    const y=top+(plotH*i/4);
+    ctx.beginPath();
+    ctx.moveTo(left,y);
+    ctx.lineTo(width-right,y);
+    ctx.stroke();
+
+    const value=yMax*(1-i/4);
+    ctx.textAlign="right";
+    ctx.fillText(humanHash(value),left-8,y);
+  }
+
+  const labels=[
+    [0,clean[0]],
+    [0.5,clean[Math.floor((clean.length-1)/2)]],
+    [1,clean[clean.length-1]]
+  ];
+
+  ctx.textBaseline="alphabetic";
+  for(const [ratio,point] of labels){
+    const x=left+plotW*ratio;
+    ctx.textAlign=ratio===0?"left":ratio===1?"right":"center";
+    ctx.fillText(
+      historyTimeLabel(point.created),
+      x,
+      height-8
+    );
+  }
+
+  ctx.beginPath();
+  clean.forEach((point,index)=>{
+    const x=left+plotW*(clean.length===1?0:index/(clean.length-1));
+    const y=top+plotH-(point.value/yMax)*plotH;
+    if(index===0)ctx.moveTo(x,y);
+    else ctx.lineTo(x,y);
+  });
+  ctx.strokeStyle=line;
+  ctx.lineWidth=2;
+  ctx.lineJoin="round";
+  ctx.lineCap="round";
+  ctx.stroke();
+}
+
+async function loadHistory(){
+  const algorithm=selectedAlgorithm;
+  const range=selectedHistoryRange;
+
+  try{
+    const response=await fetch(
+      `api/history?algorithm=${encodeURIComponent(algorithm)}&range=${encodeURIComponent(range)}`,
+      {cache:"no-store"}
+    );
+
+    const data=await response.json();
+    if(!response.ok)throw new Error(data.error||"History unavailable");
+
+    if(
+      algorithm!==selectedAlgorithm||
+      range!==selectedHistoryRange
+    )return;
+
+    const points=Array.isArray(data.points)?data.points:[];
+    lastHistoryPoints=points;
+
+    drawHashChart(
+      "hashChart",
+      "hashChartEmpty",
+      points,
+      "poolhashrate"
+    );
+    drawHashChart(
+      "networkChart",
+      "networkChartEmpty",
+      points,
+      "networkhashrate"
+    );
+  }catch(e){
+    $("hashChartEmpty").hidden=false;
+    $("networkChartEmpty").hidden=false;
+    $("hashChartEmpty").textContent="Performance history unavailable";
+    $("networkChartEmpty").textContent="Network history unavailable";
+  }
+}
+
+window.addEventListener("resize",()=>{
+  if(!lastHistoryPoints.length)return;
+  drawHashChart(
+    "hashChart",
+    "hashChartEmpty",
+    lastHistoryPoints,
+    "poolhashrate"
+  );
+  drawHashChart(
+    "networkChart",
+    "networkChartEmpty",
+    lastHistoryPoints,
+    "networkhashrate"
+  );
+});
+
 async function refresh(){
   try{
     const s=await fetch("api/status",{cache:"no-store"}).then(r=>r.json());
-    const n=s.node||{}, p=s.pool||{};
+
+    const algorithmData=(
+      s.algorithms&&s.algorithms[selectedAlgorithm]
+    )||(
+      selectedAlgorithm==="sha256d"?s:{}
+    );
+
+    const n=s.node||{};
+    const p=algorithmData.pool||{};
     const progress=Math.max(0,Math.min(100,Number(n.progress||0)*100));
 
     $("syncValue").textContent=progress.toFixed(3)+"%";
@@ -395,7 +819,11 @@ async function refresh(){
       : (p.poolEstimateHashrate
           ? `Miningcore estimate ${humanHash(p.poolEstimateHashrate)}`
           : "Live worker estimate");
-    $("minerCount").textContent=p.connectedWorkers??(s.miners||[]).length??0;
+    $("minerCount").textContent=p.connectedWorkers??(
+      Array.isArray(algorithmData.miners)
+        ? algorithmData.miners.length
+        : 0
+    );
     $("peerCount").textContent=n.connections??0;
     $("configured").textContent=s.configured?"Configured":"Needs DGB address";
     $("configured").className="small "+(s.configured?"good-text":"warn-text");
@@ -411,21 +839,29 @@ async function refresh(){
 
     if(!s.configured){
       $("heroTitle").textContent="Set your DGB address";
-      $("heroText").textContent="Enter one DigiByte reward address below. DigiForge will generate the SHA256 pool configuration automatically.";
+      $("heroText").textContent="Enter one DigiByte reward address below. DigiForge will configure both SHA256 and Scrypt mining pools automatically.";
     }else if(!ready){
       $("heroTitle").textContent="Syncing DigiByte";
-      $("heroText").textContent="Your pool is configured. Let the pruned DigiByte node finish synchronization before connecting the Bitaxe.";
+      $("heroText").textContent="Your mining pools are configured. Let DigiByte finish synchronization before connecting SHA256 or Scrypt miners.";
     }else if(p.stratum){
       $("heroTitle").textContent="Ready to mine";
-      $("heroText").textContent="DigiByte is synchronized and Stratum is online. Connect Bitaxe/ASIC miners on port 3256 or NerdMiner V2 devices on port 3257.";
+      $("heroText").textContent=selectedAlgorithm==="scrypt"
+        ? "DigiByte is synchronized and Scrypt Stratum is online. Connect Lucky Miner LG07 devices on port 3258."
+        : "DigiByte is synchronized and SHA256 Stratum is online. Connect Bitaxe/ASIC miners on port 3256 or NerdMiner V2 devices on port 3257.";
     }else{
       $("heroTitle").textContent="Starting mining pool";
-      $("heroText").textContent="DigiByte is ready. Miningcore is loading the DigiForge SHA256 configuration.";
+      $("heroText").textContent=`DigiByte is ready. Miningcore is loading the DigiForge ${algorithmUi[selectedAlgorithm].title} pool.`;
     }
 
-    const miners=Array.isArray(s.miners)?s.miners:[];
-    const perf=s.performance||{}, round=s.round||{}, summary=s.blockSummary||{};
-    const blocks=Array.isArray(s.blocks)?s.blocks:[];
+    const miners=Array.isArray(algorithmData.miners)
+      ? algorithmData.miners
+      : [];
+    const perf=algorithmData.performance||{};
+    const round=algorithmData.round||{};
+    const summary=algorithmData.blockSummary||{};
+    const blocks=Array.isArray(algorithmData.blocks)
+      ? algorithmData.blocks
+      : [];
 
     $("blockCount").textContent=numberText(summary.total||0);
     $("blockCountDetail").textContent=Number(summary.total||0)
@@ -499,7 +935,7 @@ async function refresh(){
             <strong>${escapeHtml(minerName(m,i))}</strong>
             <span class="status-badge status-${status}">${escapeHtml(status)}</span>
           </div>
-          <div class="small worker-meta">${escapeHtml(m.miner||m.address||"SHA256 worker")}</div>
+          <div class="small worker-meta">${escapeHtml(m.miner||m.address||(algorithmUi[selectedAlgorithm].title+" worker"))}</div>
           <div class="small worker-meta">
             ${escapeHtml(numberText(m.acceptedShares||0))} accepted ·
             ${escapeHtml(numberText(m.sharesLastHour||0))} last hour ·
@@ -537,7 +973,9 @@ async function saveAddress(){
 }
 updateConnectionText("");
 refresh();
+loadHistory();
 setInterval(refresh,10000);
+setInterval(loadHistory,60000);
 </script>
 </body>
 </html>

@@ -8,6 +8,7 @@ RUN pip install --no-cache-dir "pg8000==1.31.5"
 COPY web/server.py /app/server.py
 COPY web/index.html /app/index.html
 COPY web/icon.svg /app/icon.svg
+COPY web/support /app/support
 COPY web/init-secrets.py /app/init-secrets.py
 COPY config/config.default.json /app/config.default.json
 
