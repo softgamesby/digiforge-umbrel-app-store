@@ -2,6 +2,9 @@ name: Build DigiForge Images
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - dev/1.0.7-performance
 
 permissions:
   contents: read
