@@ -503,6 +503,10 @@ const $=id=>document.getElementById(id);
 
 let selectedAlgorithm="sha256d";
 let selectedHistoryRange="24h";
+let historyRequestSerial=0;
+let refreshRequestSerial=0;
+let lastHistoryKey="";
+let lastGoodNode=null;
 
 const algorithmUi={
   sha256d:{
@@ -520,6 +524,7 @@ const algorithmUi={
 function selectAlgorithm(algorithm){
   if(!algorithmUi[algorithm])return;
   selectedAlgorithm=algorithm;
+  resetHistoryCharts(`Loading ${algorithmUi[algorithm].title} history…`);
 
   document.querySelectorAll(".algo-tab").forEach(button=>{
     button.classList.toggle(
@@ -545,6 +550,7 @@ function selectAlgorithm(algorithm){
 function selectHistoryRange(range){
   if(!["1h","6h","24h","7d"].includes(range))return;
   selectedHistoryRange=range;
+  resetHistoryCharts("Loading history…");
 
   document.querySelectorAll(".range-tab").forEach(button=>{
     button.classList.toggle(
@@ -623,6 +629,27 @@ function shortHash(value){
   return v.slice(0,12)+"…"+v.slice(-12);
 }
 let lastHistoryPoints=[];
+
+function clearChart(canvasId,emptyId,message){
+  const canvas=$(canvasId);
+  const empty=$(emptyId);
+  if(canvas){
+    const ctx=canvas.getContext("2d");
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+  }
+  if(empty){
+    empty.hidden=false;
+    empty.textContent=message;
+  }
+}
+
+function resetHistoryCharts(message="Loading history…"){
+  historyRequestSerial++;
+  lastHistoryPoints=[];
+  lastHistoryKey="";
+  clearChart("hashChart","hashChartEmpty",message);
+  clearChart("networkChart","networkChartEmpty",message);
+}
 
 function chartColor(variable,fallback){
   const value=getComputedStyle(document.documentElement)
@@ -741,6 +768,8 @@ function drawHashChart(canvasId,emptyId,points,key){
 async function loadHistory(){
   const algorithm=selectedAlgorithm;
   const range=selectedHistoryRange;
+  const requestSerial=++historyRequestSerial;
+  const historyKey=`${algorithm}:${range}`;
 
   try{
     const response=await fetch(
@@ -752,12 +781,14 @@ async function loadHistory(){
     if(!response.ok)throw new Error(data.error||"History unavailable");
 
     if(
+      requestSerial!==historyRequestSerial||
       algorithm!==selectedAlgorithm||
       range!==selectedHistoryRange
     )return;
 
     const points=Array.isArray(data.points)?data.points:[];
     lastHistoryPoints=points;
+    lastHistoryKey=historyKey;
 
     drawHashChart(
       "hashChart",
@@ -772,15 +803,31 @@ async function loadHistory(){
       "networkhashrate"
     );
   }catch(e){
-    $("hashChartEmpty").hidden=false;
-    $("networkChartEmpty").hidden=false;
-    $("hashChartEmpty").textContent="Performance history unavailable";
-    $("networkChartEmpty").textContent="Network history unavailable";
+    if(
+      requestSerial!==historyRequestSerial||
+      algorithm!==selectedAlgorithm||
+      range!==selectedHistoryRange
+    )return;
+
+    lastHistoryPoints=[];
+    lastHistoryKey="";
+    clearChart(
+      "hashChart",
+      "hashChartEmpty",
+      "Performance history unavailable"
+    );
+    clearChart(
+      "networkChart",
+      "networkChartEmpty",
+      "Network history unavailable"
+    );
   }
 }
 
 window.addEventListener("resize",()=>{
-  if(!lastHistoryPoints.length)return;
+  const historyKey=`${selectedAlgorithm}:${selectedHistoryRange}`;
+  if(!lastHistoryPoints.length||lastHistoryKey!==historyKey)return;
+
   drawHashChart(
     "hashChart",
     "hashChartEmpty",
@@ -796,8 +843,13 @@ window.addEventListener("resize",()=>{
 });
 
 async function refresh(){
+  const requestSerial=++refreshRequestSerial;
+
   try{
-    const s=await fetch("api/status",{cache:"no-store"}).then(r=>r.json());
+    const response=await fetch("api/status",{cache:"no-store"});
+    const s=await response.json();
+    if(!response.ok)throw new Error(s.error||"Status unavailable");
+    if(requestSerial!==refreshRequestSerial)return;
 
     const algorithmData=(
       s.algorithms&&s.algorithms[selectedAlgorithm]
@@ -807,12 +859,40 @@ async function refresh(){
 
     const n=s.node||{};
     const p=algorithmData.pool||{};
-    const progress=Math.max(0,Math.min(100,Number(n.progress||0)*100));
+
+    if(n.online)lastGoodNode={...n};
+
+    const nodeReconnecting=(
+      !n.online&&
+      !!n.error&&
+      (!!p.online||!!lastGoodNode)
+    );
+    const displayNode=nodeReconnecting&&lastGoodNode
+      ? lastGoodNode
+      : n;
+
+    const progress=Math.max(
+      0,
+      Math.min(100,Number(displayNode.progress||0)*100)
+    );
 
     $("syncValue").textContent=progress.toFixed(3)+"%";
     $("syncBar").style.width=progress+"%";
-    $("nodeValue").innerHTML=n.online?'<span class="good-text">Online</span>':'<span class="bad-text">Offline</span>';
-    $("nodeDetail").textContent=n.online?`${n.blocks||0} blocks · ${humanBytes(n.disk)}`:"Waiting for DigiByte Core";
+
+    if(n.online){
+      $("nodeValue").innerHTML='<span class="good-text">Online</span>';
+      $("nodeDetail").textContent=
+        `${n.blocks||0} blocks · ${humanBytes(n.disk)}`;
+    }else if(nodeReconnecting){
+      $("nodeValue").innerHTML=
+        '<span class="warn-text">Reconnecting</span>';
+      $("nodeDetail").textContent=lastGoodNode
+        ? `Last known ${lastGoodNode.blocks||0} blocks · retrying DigiByte Core`
+        : "Mining pools online · retrying DigiByte Core";
+    }else{
+      $("nodeValue").innerHTML='<span class="bad-text">Offline</span>';
+      $("nodeDetail").textContent="Waiting for DigiByte Core";
+    }
     $("poolHash").textContent=humanHash(p.poolHashrate);
     $("poolHashDetail").textContent=p.effectiveHashrate6h
       ? `6h accepted-work estimate · Miningcore ${humanHash(p.poolEstimateHashrate)}`
@@ -824,7 +904,7 @@ async function refresh(){
         ? algorithmData.miners.length
         : 0
     );
-    $("peerCount").textContent=n.connections??0;
+    $("peerCount").textContent=displayNode.connections??0;
     $("configured").textContent=s.configured?"Configured":"Needs DGB address";
     $("configured").className="small "+(s.configured?"good-text":"warn-text");
 
@@ -833,13 +913,20 @@ async function refresh(){
 
     const ready=n.online && progress>99.9;
     setDot("statusDot",n.online);
-    $("statusText").textContent=n.online?(ready?"Node ready":"Node syncing"):"Node starting";
+    $("statusText").textContent=n.online
+      ? (ready?"Node ready":"Node syncing")
+      : (nodeReconnecting?"Node reconnecting":"Node starting");
     setDot("stratumDot",!!p.stratum);
     $("stratumText").textContent=p.stratum?"Stratum online":"Stratum waiting";
 
     if(!s.configured){
       $("heroTitle").textContent="Set your DGB address";
       $("heroText").textContent="Enter one DigiByte reward address below. DigiForge will configure both SHA256 and Scrypt mining pools automatically.";
+    }else if(nodeReconnecting){
+      $("heroTitle").textContent="DigiByte reconnecting";
+      $("heroText").textContent=p.stratum
+        ? "Mining remains online while the dashboard reconnects to DigiByte Core."
+        : "DigiForge is reconnecting to DigiByte Core.";
     }else if(!ready){
       $("heroTitle").textContent="Syncing DigiByte";
       $("heroText").textContent="Your mining pools are configured. Let DigiByte finish synchronization before connecting SHA256 or Scrypt miners.";
@@ -950,8 +1037,26 @@ async function refresh(){
       </div>`;
     }).join(""):'<div class="empty">No worker history yet.</div>';
   }catch(e){
+    if(requestSerial!==refreshRequestSerial)return;
+
     setDot("statusDot",false);
     $("statusText").textContent="Dashboard reconnecting";
+    $("nodeValue").innerHTML=
+      '<span class="warn-text">Reconnecting</span>';
+
+    if(lastGoodNode){
+      const progress=Math.max(
+        0,
+        Math.min(100,Number(lastGoodNode.progress||0)*100)
+      );
+      $("syncValue").textContent=progress.toFixed(3)+"%";
+      $("syncBar").style.width=progress+"%";
+      $("peerCount").textContent=lastGoodNode.connections??0;
+      $("nodeDetail").textContent=
+        `Last known ${lastGoodNode.blocks||0} blocks · retrying dashboard status`;
+    }else{
+      $("nodeDetail").textContent="Waiting for dashboard status";
+    }
   }
 }
 function escapeHtml(v){
