@@ -2,13 +2,14 @@ manifestVersion: 1
 id: digiforge-dgb-pool
 category: finance
 name: DigiForge
-version: "1.0.9"
-tagline: Private DigiByte SHA256 mining on Umbrel
+version: "1.1.0"
+tagline: Private multi-algorithm DigiByte mining on Umbrel
 description: >-
-  DigiForge is a self-hosted DigiByte SHA256 mining hub for umbrelOS.
-  It combines a pruned DigiByte Core node, a private Miningcore SHA256 pool,
-  PostgreSQL persistence, and the custom DigiForge setup and monitoring UI.
-  DigiByte RPC, PostgreSQL, and the Miningcore API stay private inside the app.
+  DigiForge is a self-hosted multi-algorithm DigiByte mining hub for umbrelOS.
+  It combines a pruned DigiByte Core node, private Miningcore SHA256 and Scrypt
+  pools, PostgreSQL persistence, and the custom DigiForge setup and monitoring
+  UI. DigiByte RPC, PostgreSQL, and the Miningcore API stay private inside the
+  app.
 developer: Mikal
 website: https://github.com/softgamesby/digiforge-umbrel-app-store
 dependencies: []
@@ -19,12 +20,13 @@ gallery: []
 path: ""
 defaultPassword: ""
 releaseNotes: >-
-  DigiForge 1.0.9 is a maintenance and bug-fix release that updates official
-  repository, support, icon, and container image references following the
-  publisher account update. It preserves the verified runtime image digests
-  and existing mining configuration while preventing broken links and future
-  image-pull or update failures caused by outdated references. Bitaxe/ASIC
-  port 3256 and NerdMiner port 3257 remain unchanged.
+  DigiForge 1.1.0 adds DigiByte Scrypt mining with Lucky Miner LG07 support on
+  port 3258 while preserving SHA256 Bitaxe/ASIC mining on port 3256 and
+  NerdMiner V2 mining on port 3257. The dashboard now provides separate
+  SHA256 and Scrypt views, live and historical performance charts, algorithm-
+  specific network statistics, blocks, workers, mining-round data, and
+  integrated Support DigiForge wallet QR codes. Existing SHA256 configuration
+  and mining history are preserved during upgrade.
 submitter: Mikal
 submission: https://github.com/softgamesby/digiforge-umbrel-app-store
 icon: https://raw.githubusercontent.com/softgamesby/digiforge-umbrel-app-store/main/digiforge-dgb-pool/icon.svg

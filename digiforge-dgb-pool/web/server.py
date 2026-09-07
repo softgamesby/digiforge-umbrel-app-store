@@ -826,7 +826,7 @@ def pool_status_snapshot(pool_id, stratum_port, network_stats=None):
     return result
 
 class Handler(BaseHTTPRequestHandler):
-    server_version = "DigiForge/1.0.8"
+    server_version = "DigiForge/1.1.0"
 
     def send_json(self, payload, status=200):
         raw = json.dumps(payload).encode()
@@ -870,7 +870,7 @@ class Handler(BaseHTTPRequestHandler):
             )
 
         if path == "/api/health":
-            return self.send_json({"ok": True, "version": "1.0.8"})
+            return self.send_json({"ok": True, "version": "1.1.0"})
 
         if path == "/api/history":
             query = urllib.parse.parse_qs(
@@ -950,7 +950,7 @@ class Handler(BaseHTTPRequestHandler):
 
         if path == "/api/status":
             result = {
-                "version": "1.0.8",
+                "version": "1.1.0",
                 "configured": bool(current_address()),
                 "address": current_address(),
                 "node": {"online": False},
