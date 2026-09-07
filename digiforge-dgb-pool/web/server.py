@@ -447,11 +447,20 @@ def miningcore_db_metrics(pool_id=POOL_ID):
                     * 4294967296.0 / 21600.0 AS effectivehashrate6h,
                 COUNT(*) AS shares6h,
                 MIN(created) AS windowstart,
-                MAX(created) AS windowend
+                MAX(created) AS windowend,
+                COALESCE(
+                    (
+                        SELECT MIN(all_shares.created)
+                            <= NOW() - INTERVAL '6 hours'
+                        FROM shares AS all_shares
+                        WHERE all_shares.poolid = %s
+                    ),
+                    FALSE
+                ) AS hasfullwindow
             FROM shares
             WHERE poolid = %s
               AND created > NOW() - INTERVAL '6 hours'
-        """, (pool_id,))
+        """, (pool_id, pool_id))
         effective_hashrate = (
             effective_hashrate_rows[0]
             if effective_hashrate_rows else {}
@@ -755,7 +764,14 @@ def pool_status_snapshot(pool_id, stratum_port, network_stats=None):
             effective_hashrate = float(
                 effective.get("effectivehashrate6h") or 0
             )
-            if effective_hashrate > 0:
+            use_effective_hashrate = (
+                effective_hashrate > 0
+                and (
+                    pool_id != SCRYPT_POOL_ID
+                    or bool(effective.get("hasfullwindow"))
+                )
+            )
+            if use_effective_hashrate:
                 result["pool"]["poolHashrate"] = effective_hashrate
                 result["pool"]["effectiveHashrate6h"] = effective_hashrate
                 result["pool"]["effectiveHashrateShares6h"] = int(
@@ -894,9 +910,36 @@ class Handler(BaseHTTPRequestHandler):
                     algorithms[algorithm],
                     ranges[range_name],
                 )
+
+                network_hashrate_source = "miningcore"
+                if algorithm == "scrypt":
+                    authoritative = digibyte_algorithm_stats()["scrypt"]
+                    current_difficulty = float(
+                        authoritative.get("networkDifficulty") or 0
+                    )
+                    current_hashrate = float(
+                        authoritative.get("networkHashrate") or 0
+                    )
+
+                    if current_difficulty > 0 and current_hashrate > 0:
+                        hashes_per_difficulty = (
+                            current_hashrate / current_difficulty
+                        )
+                        for point in points:
+                            difficulty = float(
+                                point.get("networkdifficulty") or 0
+                            )
+                            point["networkhashrate"] = (
+                                difficulty * hashes_per_difficulty
+                            )
+                        network_hashrate_source = (
+                            "digibyte-scrypt-difficulty-estimate"
+                        )
+
                 return self.send_json({
                     "algorithm": algorithm,
                     "range": range_name,
+                    "networkHashrateSource": network_hashrate_source,
                     "points": points,
                 })
             except Exception as exc:
