@@ -4,15 +4,15 @@
 
 # DigiForge
 
-### Self-hosted DigiByte SHA256 mining infrastructure for umbrelOS
+### Self-hosted DigiByte SHA256 + Scrypt mining infrastructure for umbrelOS
 
-**Private Pool · Local Infrastructure · Persistent Statistics · Modern Monitoring**
+**Private Pools · Local Infrastructure · Persistent Statistics · Modern Monitoring**
 
 <br>
 
-![Release](https://img.shields.io/badge/DigiForge-1.0.9-2f81f7?style=for-the-badge)
+![Release](https://img.shields.io/badge/DigiForge-1.1.0-2f81f7?style=for-the-badge)
 ![DigiByte](https://img.shields.io/badge/DigiByte-DGB-0066cc?style=for-the-badge)
-![Mining](https://img.shields.io/badge/Mining-SHA256-555555?style=for-the-badge)
+![Mining](https://img.shields.io/badge/Mining-SHA256%20%2B%20Scrypt-555555?style=for-the-badge)
 ![Umbrel](https://img.shields.io/badge/Platform-umbrelOS-7c3aed?style=for-the-badge)
 
 </div>
@@ -21,16 +21,17 @@
 
 ## About DigiForge
 
-DigiForge is a self-hosted DigiByte SHA256 mining hub built for umbrelOS.
+DigiForge is a self-hosted multi-algorithm DigiByte mining hub built for umbrelOS.
 
 It combines:
 
-- a pruned DigiByte Core node
-- a private Miningcore SHA256 pool
+- a pruned DigiByte Core node shared by both mining algorithms
+- private Miningcore SHA256 and Scrypt pools
 - PostgreSQL mining statistics and persistent accepted-share history
-- worker-level monitoring
+- separate SHA256 and Scrypt worker, round, block, and performance views
+- live and historical pool/network hashrate charts
 - a responsive DigiForge dashboard and setup interface
-- dedicated Stratum support for Bitaxe/ASIC and NerdMiner devices
+- dedicated Stratum support for Bitaxe/ASIC, NerdMiner V2, and Lucky Miner LG07 devices
 
 DigiByte RPC, PostgreSQL, and the Miningcore API remain private inside the DigiForge app network.
 
@@ -40,19 +41,21 @@ DigiByte RPC, PostgreSQL, and the Miningcore API remain private inside the DigiF
 
 ## Current Release
 
-### DigiForge 1.0.9
+### DigiForge 1.1.0
 
-DigiForge 1.0.9 is a maintenance and bug-fix release that updates official repository, support, icon, and container package references while preserving the verified immutable runtime image digests and existing mining configuration.
+DigiForge 1.1.0 adds DigiByte Scrypt mining and Lucky Miner LG07 support while preserving the existing SHA256 pool, configuration, and mining history. The dashboard now provides separate SHA256 and Scrypt views, algorithm-specific network statistics, worker monitoring, round data, block history, and live/historical performance charts.
 
 | Component | Status |
 | --- | --- |
 | DigiByte Node | Supported |
 | SHA256 Mining Pool | Supported |
-| Bitaxe / ASIC | Stratum port `3256` |
-| NerdMiner V2 | Stratum port `3257` |
+| Scrypt Mining Pool | Supported |
+| Bitaxe / ASIC | SHA256 Stratum port `3256` |
+| NerdMiner V2 | SHA256 Stratum port `3257` |
+| Lucky Miner LG07 | Scrypt Stratum port `3258` |
 | PostgreSQL Statistics | Enabled |
 | Automatic payouts | Disabled |
-| Current Umbrel release | `1.0.9` |
+| Current Umbrel release | `1.1.0` |
 
 ---
 
@@ -94,18 +97,30 @@ Additional workers can use their own worker suffix, for example:
 YOUR_DGB_ADDRESS.nrd2
 ```
 
+### Lucky Miner LG07 / Scrypt
+
+```text
+Pool:     stratum+tcp://YOUR-UMBREL-IP:3258
+User:     YOUR_DGB_ADDRESS.LG07
+Password: x
+```
+
+VarDiff range: `512–16384` · target share time: `15s`.
+
 ---
 
 ## DigiForge Features
 
 | Feature | Description |
 | --- | --- |
-| Pool Hashrate | Six-hour accepted-work effective hashrate |
+| Multi-Algorithm Dashboard | Separate SHA256 and Scrypt views |
+| Pool Hashrate | Algorithm-specific pool hashrate with accepted-work handling |
+| Performance Charts | Historical pool and network hashrate for 1h, 6h, 24h and 7d |
 | Worker Monitoring | Individual worker hashrate, shares and activity state |
 | Round Effort | Accepted mining work versus statistical expected work |
-| Expected Block Time | Statistical estimate using effective pool hashrate |
-| Network Share | Pool effective hashrate versus DigiByte SHA256 network |
-| Block History | Displays blocks recorded by Miningcore |
+| Expected Block Time | Statistical estimate using algorithm-specific pool/network hashrate |
+| Network Share | Pool hashrate versus the matching DigiByte algorithm network |
+| Block History | Separate SHA256 and Scrypt blocks recorded by Miningcore |
 | Persistent Data | PostgreSQL-backed mining statistics |
 | Private Services | RPC, database and Miningcore API remain internal |
 
@@ -131,7 +146,7 @@ If DigiForge has been useful to you and you would like to support continued deve
 | **Litecoin (LTC)** | `ltc1q67h4p7durruk8xkjz3yh6v3jrua5jxh9yy3s9q` | <img src="assets/support/ltc.png" width="110" alt="Litecoin support QR"> |
 | **DigiByte (DGB)** | `dgb1qy4h02rhasx2f8q7whn4sanfsdhgajhek34dsv5` | <img src="assets/support/dgb.png" width="110" alt="DigiByte support QR"> |
 
-> Support is entirely optional and does not provide additional features, mining advantages, or privileges.
+> Support addresses are public receiving addresses only. Mining rewards are sent to the DigiByte reward address configured in DigiForge. Support is entirely optional and does not provide additional features, mining advantages, or privileges.
 
 ---
 
@@ -167,6 +182,6 @@ Their respective licenses and attribution remain applicable.
 
 **DigiForge · Developed by Mikal**
 
-`DigiByte` · `SHA256` · `umbrelOS`
+`DigiByte` · `SHA256` · `Scrypt` · `LG07` · `umbrelOS`
 
 </div>
