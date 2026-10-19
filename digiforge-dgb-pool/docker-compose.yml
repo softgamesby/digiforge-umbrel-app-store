@@ -8,14 +8,14 @@ services:
       APP_PORT: 8080
 
   init:
-    image: ghcr.io/softgamesby/digiforge-web@sha256:999660a144641b01494088b3a205c31f05865bf236e614c282901f234baaea8d
+    image: ghcr.io/softgamesby/digiforge-web@sha256:9ad094a7ea26cd984e9bf5ad006806bdc5f87da423254fb420def7e451ccf4f3
     restart: "no"
     entrypoint: ["python", "/app/init-secrets.py"]
     volumes:
       - ${APP_DATA_DIR}/secrets:/secrets
 
   web:
-    image: ghcr.io/softgamesby/digiforge-web@sha256:999660a144641b01494088b3a205c31f05865bf236e614c282901f234baaea8d
+    image: ghcr.io/softgamesby/digiforge-web@sha256:9ad094a7ea26cd984e9bf5ad006806bdc5f87da423254fb420def7e451ccf4f3
     restart: on-failure
     stop_grace_period: 10s
     depends_on:
@@ -67,7 +67,7 @@ services:
         ipv4_address: 172.29.36.10
 
   postgres:
-    image: ghcr.io/softgamesby/digiforge-postgres@sha256:f37876bd3e488908e19450e2c29d7e1dec795eef78134b95b284a05db02e50c5
+    image: ghcr.io/softgamesby/digiforge-postgres@sha256:6171fefff5354cac7f6981998e85eb82efe0f4bc279e1ba3b9d3ee93098a6081
     restart: on-failure
     stop_grace_period: 30s
     depends_on:
