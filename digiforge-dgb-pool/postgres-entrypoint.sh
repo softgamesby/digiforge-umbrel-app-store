@@ -48,6 +48,14 @@ printf "ALTER ROLE miningcore WITH PASSWORD '%s';\n" "$ESCAPED_PASSWORD" |
 
 unset NEW_PASSWORD ESCAPED_PASSWORD
 
-echo "DigiForge: PostgreSQL credential synchronized"
+psql \
+    -h /var/run/postgresql \
+    -U "$PGUSER" \
+    -d "$PGDATABASE" \
+    -q -v ON_ERROR_STOP=1 \
+    -c 'ALTER TABLE IF EXISTS blocks ADD COLUMN IF NOT EXISTS minereffort DOUBLE PRECISION;' \
+    >/dev/null
+
+echo "DigiForge: PostgreSQL credential and schema synchronized"
 
 wait "$postgres_pid"

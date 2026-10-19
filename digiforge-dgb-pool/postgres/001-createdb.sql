@@ -24,6 +24,7 @@ CREATE TABLE IF NOT EXISTS blocks (
     type TEXT NULL,
     confirmationprogress FLOAT NOT NULL DEFAULT 0,
     effort FLOAT NULL,
+    minereffort DOUBLE PRECISION NULL,
     transactionconfirmationdata TEXT NOT NULL,
     miner TEXT NULL,
     reward DECIMAL(28,12) NULL,
