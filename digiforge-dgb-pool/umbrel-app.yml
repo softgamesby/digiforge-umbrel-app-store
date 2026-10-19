@@ -2,7 +2,7 @@ manifestVersion: 1
 id: digiforge-dgb-pool
 category: finance
 name: DigiForge
-version: "1.1.0"
+version: "1.1.1"
 tagline: Private multi-algorithm DigiByte mining on Umbrel
 description: >-
   DigiForge is a self-hosted multi-algorithm DigiByte mining hub for umbrelOS.
@@ -20,13 +20,11 @@ gallery: []
 path: ""
 defaultPassword: ""
 releaseNotes: >-
-  DigiForge 1.1.0 adds DigiByte Scrypt mining with Lucky Miner LG07 support on
-  port 3258 while preserving SHA256 Bitaxe/ASIC mining on port 3256 and
-  NerdMiner V2 mining on port 3257. The dashboard now provides separate
-  SHA256 and Scrypt views, live and historical performance charts, algorithm-
-  specific network statistics, blocks, workers, mining-round data, and
-  integrated Support DigiForge wallet QR codes. Existing SHA256 configuration
-  and mining history are preserved during upgrade.
+  DigiForge 1.1.1 fixes block confirmation and reward display when Miningcore
+  payout processing is disabled, reconciling found blocks against DigiByte Core
+  while preserving DigiForge's direct-coinbase mining model. It also adds the
+  Miningcore minereffort database column for fresh installs and applies the
+  schema change automatically to existing PostgreSQL data during upgrade.
 submitter: Mikal
 submission: https://github.com/softgamesby/digiforge-umbrel-app-store
 icon: https://raw.githubusercontent.com/softgamesby/digiforge-umbrel-app-store/main/digiforge-dgb-pool/icon.svg
