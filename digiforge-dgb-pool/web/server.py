@@ -52,6 +52,9 @@ SCRYPT_STRATUM_PORT = "3258"
 DB_METRICS_CACHE = {}
 DB_METRICS_TTL_SECONDS = 10
 
+BLOCK_RECONCILE_CACHE = {}
+BLOCK_RECONCILE_TTL_SECONDS = 300
+
 def atomic_write(path, text):
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(path.suffix + ".tmp")
@@ -279,6 +282,79 @@ def rpc(method, params=None):
         raise RuntimeError(str(body["error"]))
     return body.get("result")
 
+def reconcile_block_row(block, include_reward=True):
+    """Reconcile a Miningcore block row against authoritative DigiByte Core."""
+    result = dict(block)
+    block_hash = str(result.get("hash") or "").strip()
+    if not block_hash:
+        return result
+
+    persisted_status = str(result.get("status") or "").lower()
+    status_needs_reconcile = persisted_status in ("", "pending")
+
+    reward_needs_reconcile = False
+    if include_reward:
+        try:
+            reward_needs_reconcile = Decimal(
+                str(result.get("reward") or 0)
+            ) <= 0
+        except Exception:
+            reward_needs_reconcile = True
+
+    if not status_needs_reconcile and not reward_needs_reconcile:
+        return result
+
+    now = time.monotonic()
+    cached = BLOCK_RECONCILE_CACHE.get(block_hash)
+    if cached and now - cached["time"] < BLOCK_RECONCILE_TTL_SECONDS:
+        cached_result = dict(cached["result"])
+        if not include_reward or cached.get("includes_reward", False):
+            return cached_result
+
+    try:
+        verbosity = 2 if reward_needs_reconcile else 1
+        chain_block = rpc("getblock", [block_hash, verbosity])
+    except Exception:
+        # Keep the dashboard available if DigiByte Core is temporarily
+        # unavailable. Fall back to Miningcore's persisted state.
+        return result
+
+    if not isinstance(chain_block, dict):
+        return result
+
+    confirmations = int(chain_block.get("confirmations") or 0)
+    result["chainConfirmations"] = confirmations
+
+    if confirmations > 0:
+        result["status"] = "confirmed"
+        result["confirmationprogress"] = 1.0
+    elif confirmations < 0:
+        result["status"] = "orphaned"
+        result["confirmationprogress"] = 0.0
+    else:
+        result["status"] = "pending"
+        result["confirmationprogress"] = 0.0
+
+    if include_reward:
+        transactions = chain_block.get("tx") or []
+        if transactions and isinstance(transactions[0], dict):
+            reward = Decimal("0")
+            for output in transactions[0].get("vout") or []:
+                if isinstance(output, dict):
+                    value = Decimal(str(output.get("value") or 0))
+                    if value > 0:
+                        reward += value
+            if reward > 0:
+                result["reward"] = float(reward)
+
+    BLOCK_RECONCILE_CACHE[block_hash] = {
+        "time": now,
+        "result": dict(result),
+        "includes_reward": include_reward,
+    }
+
+    return result
+
 def digibyte_algorithm_stats():
     info = rpc("getmininginfo")
     difficulties = info.get("difficulties") or {}
@@ -484,23 +560,38 @@ def miningcore_db_metrics(pool_id=POOL_ID):
             LIMIT 10
         """, (pool_id,))
 
-        block_summary_rows = db_fetch(cursor, """
-            SELECT
-                COUNT(*) AS total,
-                COUNT(*) FILTER (
-                    WHERE LOWER(COALESCE(status, '')) = 'confirmed'
-                ) AS confirmed,
-                COUNT(*) FILTER (
-                    WHERE LOWER(COALESCE(status, '')) = 'pending'
-                ) AS pending,
-                COUNT(*) FILTER (
-                    WHERE LOWER(COALESCE(status, '')) IN ('orphaned', 'orphan')
-                ) AS orphaned,
-                MAX(created) AS lastblock
+        block_rows = [
+            reconcile_block_row(row, include_reward=True)
+            for row in block_rows
+        ]
+
+        summary_rows = db_fetch(cursor, """
+            SELECT status, hash, created
             FROM blocks
             WHERE poolid = %s
+            ORDER BY created DESC
         """, (pool_id,))
-        block_summary = block_summary_rows[0] if block_summary_rows else {}
+        summary_rows = [
+            reconcile_block_row(row, include_reward=False)
+            for row in summary_rows
+        ]
+
+        block_summary = {
+            "total": len(summary_rows),
+            "confirmed": sum(
+                1 for row in summary_rows
+                if str(row.get("status") or "").lower() == "confirmed"
+            ),
+            "pending": sum(
+                1 for row in summary_rows
+                if str(row.get("status") or "").lower() == "pending"
+            ),
+            "orphaned": sum(
+                1 for row in summary_rows
+                if str(row.get("status") or "").lower() in ("orphaned", "orphan")
+            ),
+            "lastblock": summary_rows[0].get("created") if summary_rows else None,
+        }
 
         cursor.execute("""
             SELECT created
