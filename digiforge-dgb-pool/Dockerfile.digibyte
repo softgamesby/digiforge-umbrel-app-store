@@ -1,4 +1,42 @@
-FROM blocknetdx/digibyte@sha256:03d8b8e074e23314e19085ba07783457777553ad7c8df65afb767eca2385d684
+# syntax=docker/dockerfile:1.7
+
+FROM python:3.13-slim-bookworm@sha256:70bda1e795ded2a684ef9815955e05829b14ee5bb5c3eb2a940648e88f10fce9
+
+ADD --checksum=sha256:cdbd6ed7efdb006b91b76389db79d2a3db2593f05e56dd789f394a1b4366c211 \
+    https://github.com/DigiByte-Core/digibyte/releases/download/v9.26.6/digibyte-9.26.6-x86_64-linux-gnu.tar.gz \
+    /tmp/digibyte.tar.gz
+
+RUN python3 - <<'PY'
+import os
+import shutil
+import tarfile
+
+archive = "/tmp/digibyte.tar.gz"
+prefix = "digibyte-9.26.6/bin/"
+binaries = (
+    "digibyted",
+    "digibyte-cli",
+    "digibyte-tx",
+    "digibyte-util",
+    "digibyte-wallet",
+)
+
+with tarfile.open(archive, "r:gz") as tar:
+    for binary in binaries:
+        source = prefix + binary
+        member = tar.getmember(source)
+        extracted = tar.extractfile(member)
+        if extracted is None:
+            raise RuntimeError(f"Unable to extract {source}")
+
+        destination = f"/usr/bin/{binary}"
+        with extracted, open(destination, "wb") as out:
+            shutil.copyfileobj(extracted, out)
+
+        os.chmod(destination, 0o755)
+
+os.remove(archive)
+PY
 
 COPY digibyte-entrypoint.py /usr/local/bin/digiforge-digibyte-entrypoint.py
 
