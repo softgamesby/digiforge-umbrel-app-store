@@ -35,7 +35,7 @@ services:
       - backend
 
   digibyted:
-    image: ghcr.io/softgamesby/digiforge-digibyte@sha256:427e2104a2cd35b57e320fc5a1dccd3c5eeed246a9bd64049f91d4388e59ee32
+    image: ghcr.io/softgamesby/digiforge-digibyte@sha256:5714e7fe49b2a5012cbc90c7e61e881b7ed611846329cdf2a13c2c50a17d8a9b
     platform: linux/amd64
     restart: on-failure
     stop_grace_period: 60s
