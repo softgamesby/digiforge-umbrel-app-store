@@ -8,14 +8,14 @@ services:
       APP_PORT: 8080
 
   init:
-    image: ghcr.io/softgamesby/digiforge-web@sha256:9ad094a7ea26cd984e9bf5ad006806bdc5f87da423254fb420def7e451ccf4f3
+    image: ghcr.io/softgamesby/digiforge-web@sha256:9671bdf274714790080240289fdad3c0daa1a874a9cef9e8a357377a96211015
     restart: "no"
     entrypoint: ["python", "/app/init-secrets.py"]
     volumes:
       - ${APP_DATA_DIR}/secrets:/secrets
 
   web:
-    image: ghcr.io/softgamesby/digiforge-web@sha256:9ad094a7ea26cd984e9bf5ad006806bdc5f87da423254fb420def7e451ccf4f3
+    image: ghcr.io/softgamesby/digiforge-web@sha256:9671bdf274714790080240289fdad3c0daa1a874a9cef9e8a357377a96211015
     restart: on-failure
     stop_grace_period: 10s
     depends_on:
@@ -35,7 +35,7 @@ services:
       - backend
 
   digibyted:
-    image: ghcr.io/softgamesby/digiforge-digibyte@sha256:5714e7fe49b2a5012cbc90c7e61e881b7ed611846329cdf2a13c2c50a17d8a9b
+    image: ghcr.io/softgamesby/digiforge-digibyte@sha256:2ade2e078e34c270fa7f29e357dfa6449a9fd0221e251b56cb2acd23ad7703c8
     platform: linux/amd64
     restart: on-failure
     stop_grace_period: 60s
@@ -67,7 +67,7 @@ services:
         ipv4_address: 172.29.36.10
 
   postgres:
-    image: ghcr.io/softgamesby/digiforge-postgres@sha256:6171fefff5354cac7f6981998e85eb82efe0f4bc279e1ba3b9d3ee93098a6081
+    image: ghcr.io/softgamesby/digiforge-postgres@sha256:7623b6a4396cd2f2fe197c7c8e43e77e7e5d6a9b2ca960c92138baf1355fbdff
     restart: on-failure
     stop_grace_period: 30s
     depends_on:
@@ -90,7 +90,7 @@ services:
         ipv4_address: 172.29.36.20
 
   miningcore:
-    image: ghcr.io/softgamesby/digiforge-miningcore@sha256:b3030ce7635f76f5564f5e4f1329e4a3952b2be3f818bbdebee4f2d0336a8c9a
+    image: ghcr.io/softgamesby/digiforge-miningcore@sha256:3ed484b1fde3197dbccc62c546484f7afa8e1445718ce9817242f09bf7ab76e0
     platform: linux/amd64
     restart: on-failure
     stop_grace_period: 30s
