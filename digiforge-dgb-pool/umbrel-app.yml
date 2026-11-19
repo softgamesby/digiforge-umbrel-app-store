@@ -2,7 +2,7 @@ manifestVersion: 1
 id: digiforge-dgb-pool
 category: finance
 name: DigiForge
-version: "1.1.2"
+version: "1.1.3"
 tagline: Private multi-algorithm DigiByte mining on Umbrel
 description: >-
   DigiForge is a self-hosted multi-algorithm DigiByte mining hub for umbrelOS.
@@ -20,11 +20,12 @@ gallery: []
 path: ""
 defaultPassword: ""
 releaseNotes: >-
-  DigiForge 1.1.2 upgrades DigiByte Core from v8.26.2 to v9.26.6 for compatibility
-  with current DigiByte consensus rules, including the version-bit 23 deployment.
-  The DigiByte image is built from the official v9.26.6 Linux release archive,
-  verified by its published SHA-256 checksum, and pinned by immutable container
-  digest.
+  DigiForge 1.1.3 preserves rejected DigiByte block candidates in Miningcore
+  history instead of discarding them after daemon submission. The dashboard
+  now distinguishes accepted blocks from rejected candidates and records
+  worker, algorithm, and rejection reason where available. Existing accepted-
+  block, payout, and round-effort semantics are preserved, while PostgreSQL
+  schema changes are applied automatically to existing installations.
 submitter: Mikal
 submission: https://github.com/softgamesby/digiforge-umbrel-app-store
 icon: https://raw.githubusercontent.com/softgamesby/digiforge-umbrel-app-store/main/digiforge-dgb-pool/icon.svg
