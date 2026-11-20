@@ -8,14 +8,14 @@ services:
       APP_PORT: 8080
 
   init:
-    image: ghcr.io/softgamesby/digiforge-web@sha256:9671bdf274714790080240289fdad3c0daa1a874a9cef9e8a357377a96211015
+    image: ghcr.io/softgamesby/digiforge-web@sha256:58c4da4e6f5f83b232e1e0880890eca9f80ef54426d00479a13055469e70b243
     restart: "no"
     entrypoint: ["python", "/app/init-secrets.py"]
     volumes:
       - ${APP_DATA_DIR}/secrets:/secrets
 
   web:
-    image: ghcr.io/softgamesby/digiforge-web@sha256:9671bdf274714790080240289fdad3c0daa1a874a9cef9e8a357377a96211015
+    image: ghcr.io/softgamesby/digiforge-web@sha256:58c4da4e6f5f83b232e1e0880890eca9f80ef54426d00479a13055469e70b243
     restart: on-failure
     stop_grace_period: 10s
     depends_on:
